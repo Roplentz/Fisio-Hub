@@ -1,16 +1,41 @@
-# GitHub Pages
+# Fisio Hub
 
-<img src="https://octodex.github.com/images/Professortocat_v2.png" align="right" height="200px" />
+Sistema Operacional Inteligente para Fisioterapeutas.
 
-Hey Roplentz!
+O **Fisio Hub** é a base pública do ecossistema Fisio IA Academy, integrando IA, educação, prática baseada em evidências, gestão, marketing, inovação e produção de conteúdo.
 
-Mona here. I'm done preparing your exercise. Hope you enjoy! 💚
+## Estrutura inicial
 
-Remember, it's self-paced so feel free to take a break! ☕️
+- `index.html` — página inicial do Fisio Hub.
+- `pilates-5/index.html` — página da apresentação Pilates 5.0.
+- Futuro: `agents/`, `prompts/`, `presentations/`, `assets/`, `docs/`.
 
-[![](https://img.shields.io/badge/Go%20to%20Exercise-%E2%86%92-1f883d?style=for-the-badge&logo=github&labelColor=197935)](https://github.com/Roplentz/Fisio-Hub/issues/1)
+## Primeira publicação
 
----
+### Pilates 5.0
 
-&copy; 2025 GitHub &bull; [Code of Conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/code_of_conduct.md) &bull; [MIT License](https://gh.io/mit)
+Da técnica ao ecossistema inteligente: IA, visão computacional, machine learning, LLMs, IoT, IAT, digital twins e Eletropilates.
 
+Link esperado após ativar GitHub Pages:
+
+`https://roplentz.github.io/Fisio-Hub/pilates-5/`
+
+## GitHub Pages
+
+Para publicar:
+
+1. Settings → Pages.
+2. Source: Deploy from a branch.
+3. Branch: `main`.
+4. Folder: `/ (root)`.
+5. Save.
+
+Link raiz esperado:
+
+`https://roplentz.github.io/Fisio-Hub/`
+
+## Desenvolvido por
+
+Prof. Dr. Rodrigo Della Méa Plentz  
+Fisio IA Academy  
+IAS OS • Creation Engine 5.0
