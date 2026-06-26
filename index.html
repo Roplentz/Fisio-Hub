@@ -1,10 +1,63 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Fisio Hub | Fisio IA Academy</title>
-<style>
-:root{--navy:#061A40;--blue:#0D479A;--cyan:#18C4D6;--white:#F7F9FC;--muted:#9FB7D4}*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-serif;background:radial-gradient(circle at 20% 0%,rgba(24,196,214,.25),transparent 30%),linear-gradient(135deg,#020817,var(--navy));color:white;min-height:100vh}main{max-width:1120px;margin:auto;padding:64px 24px}.badge{color:var(--cyan);font-weight:900;letter-spacing:.14em;text-transform:uppercase;font-size:12px}h1{font-size:clamp(46px,8vw,96px);line-height:.9;margin:18px 0;letter-spacing:-.06em}p{color:var(--muted);font-size:20px;line-height:1.5;max-width:840px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-top:34px}.card{background:rgba(255,255,255,.07);border:1px solid rgba(24,196,214,.25);border-radius:24px;padding:24px;text-decoration:none;color:white;transition:.2s}.card:hover{transform:translateY(-3px);background:rgba(24,196,214,.12)}.card h2{color:var(--cyan);margin:0 0 8px}.card p{font-size:15px;margin:0}.hero{padding:34px;border:1px solid rgba(24,196,214,.32);background:rgba(255,255,255,.06);border-radius:30px;margin-top:34px}</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FisioHub | Sistema Operacional de IA para Fisioterapeutas</title>
+  <meta name="description" content="FisioHub é o sistema operacional inteligente para fisioterapeutas: ciência, IA, educação, gestão, marketing e inovação em um só ecossistema." />
+  <style>
+    :root{
+      --navy:#061A40; --blue:#0D479A; --cyan:#18C4D6; --cyan2:#7DF9FF;
+      --white:#F7F9FC; --muted:#A9BCD8; --dark:#020817; --glass:rgba(255,255,255,.08);
+      --border:rgba(125,249,255,.22); --gold:#F8D66D;
+    }
+    *{box-sizing:border-box} html{scroll-behavior:smooth}
+    body{margin:0;font-family:Inter,Arial,Helvetica,sans-serif;background:var(--dark);color:white;overflow-x:hidden}
+    body:before{content:"";position:fixed;inset:0;background:radial-gradient(circle at 10% 5%,rgba(24,196,214,.32),transparent 28%),radial-gradient(circle at 90% 15%,rgba(13,71,154,.45),transparent 32%),linear-gradient(135deg,#020817 0%,#061A40 55%,#020817 100%);z-index:-2}
+    body:after{content:"";position:fixed;inset:0;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:54px 54px;mask-image:linear-gradient(to bottom,black,transparent 85%);z-index:-1}
+    a{color:inherit;text-decoration:none}.wrap{max-width:1180px;margin:auto;padding:0 22px}.nav{position:sticky;top:0;z-index:10;backdrop-filter:blur(18px);background:rgba(2,8,23,.72);border-bottom:1px solid rgba(255,255,255,.08)}
+    .navin{height:76px;display:flex;align-items:center;justify-content:space-between}.brand{display:flex;gap:12px;align-items:center;font-weight:900;letter-spacing:-.03em}.logo{width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,var(--cyan),var(--blue));display:grid;place-items:center;box-shadow:0 0 28px rgba(24,196,214,.45)}
+    .links{display:flex;gap:18px;color:var(--muted);font-size:14px}.cta{background:linear-gradient(135deg,var(--cyan),#0D479A);padding:12px 18px;border-radius:999px;font-weight:800;box-shadow:0 0 26px rgba(24,196,214,.25)}
+    .hero{padding:86px 0 48px}.badge{display:inline-flex;gap:8px;align-items:center;color:var(--cyan2);font-weight:900;letter-spacing:.16em;text-transform:uppercase;font-size:12px;border:1px solid var(--border);background:rgba(24,196,214,.08);padding:9px 13px;border-radius:999px}
+    h1{font-size:clamp(48px,8vw,104px);line-height:.9;margin:22px 0 18px;letter-spacing:-.075em;max-width:980px}.grad{background:linear-gradient(90deg,#fff,var(--cyan2),#fff);-webkit-background-clip:text;color:transparent}
+    .lead{font-size:clamp(18px,2.2vw,24px);line-height:1.55;color:var(--muted);max-width:840px}.actions{display:flex;gap:14px;flex-wrap:wrap;margin-top:30px}.btn{border:1px solid var(--border);padding:15px 20px;border-radius:16px;font-weight:850;background:rgba(255,255,255,.06)}.btn.primary{background:linear-gradient(135deg,var(--cyan),var(--blue));border:0;color:white}.btn:hover{transform:translateY(-2px)}
+    .panel{margin-top:44px;border:1px solid var(--border);background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.045));border-radius:34px;padding:26px;box-shadow:0 24px 80px rgba(0,0,0,.35)}
+    .dash{display:grid;grid-template-columns:1.1fr .9fr;gap:20px}.screen{border:1px solid rgba(255,255,255,.10);border-radius:26px;background:rgba(2,8,23,.55);padding:22px}.screen h2{font-size:28px;margin:0 0 8px}.screen p{color:var(--muted);line-height:1.55}.metricgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:18px}.metric{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:16px}.metric strong{display:block;color:var(--cyan2);font-size:25px}.metric span{color:var(--muted);font-size:13px}
+    section{padding:58px 0}.section-title{font-size:clamp(32px,5vw,58px);letter-spacing:-.055em;margin:0 0 14px}.section-sub{color:var(--muted);font-size:18px;max-width:780px;line-height:1.6}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:30px}.card{min-height:210px;border:1px solid var(--border);background:rgba(255,255,255,.065);border-radius:28px;padding:24px;transition:.2s}.card:hover{transform:translateY(-4px);background:rgba(24,196,214,.10)}.icon{font-size:28px}.card h3{font-size:22px;margin:16px 0 9px}.card p{color:var(--muted);line-height:1.55;margin:0}.tag{display:inline-block;margin-top:16px;color:var(--cyan2);font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.12em}
+    .roadmap{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:30px}.step{padding:20px;border-left:2px solid var(--cyan);background:rgba(255,255,255,.05);border-radius:18px}.step b{color:var(--gold)}.step p{color:var(--muted)}
+    .footer{padding:44px 0 70px;color:var(--muted);border-top:1px solid rgba(255,255,255,.08)}
+    @media(max-width:860px){.links{display:none}.dash,.grid,.roadmap{grid-template-columns:1fr}.hero{padding-top:54px}.panel{padding:16px}.navin{height:68px}.metricgrid{grid-template-columns:1fr}}
+  </style>
 </head>
-<body><main><div class="badge">Fisio IA Academy | IAS OS</div><h1>Fisio Hub</h1><p>Sistema operacional inteligente para fisioterapeutas: IA, educação, ciência, gestão, marketing e inovação em um ecossistema só.</p><div class="hero"><h2>Primeira publicação</h2><p>A biblioteca pública começa com a apresentação Pilates 5.0.</p></div><div class="grid"><a class="card" href="./pilates-5/"><h2>Pilates 5.0</h2><p>IA, visão computacional, ML, LLMs, IoT, IAT, digital twins e Eletropilates.</p></a><div class="card"><h2>Em breve</h2><p>Eletropilates, VFC, IA para Fisioterapeutas e Gestão Hospitalar.</p></div></div></main></body></html>
+<body>
+  <nav class="nav"><div class="wrap navin"><a class="brand" href="#"><span class="logo">⚡</span><span>FisioHub</span></a><div class="links"><a href="#agentes">Agentes</a><a href="#ecossistema">Ecossistema</a><a href="#roadmap">Roadmap</a></div><a class="cta" href="./pilates-5/">Entrar no Hub</a></div></nav>
+
+  <main>
+    <section class="hero"><div class="wrap">
+      <div class="badge">Fisio IA Academy • Sistema operacional inteligente</div>
+      <h1>O novo centro de comando da <span class="grad">fisioterapia com IA.</span></h1>
+      <p class="lead">Ciência, educação, gestão, marketing e inovação trabalhando juntos para transformar o fisioterapeuta em um profissional aumentado. Sem planilha zumbi. Sem PDF perdido. Sem gambiarra com crachá.</p>
+      <div class="actions"><a class="btn primary" href="#agentes">Explorar agentes</a><a class="btn" href="./pilates-5/">Ver Pilates 5.0</a></div>
+      <div class="panel"><div class="dash">
+        <div class="screen"><h2>Dashboard FisioHub</h2><p>Um ambiente para criar aulas, revisar evidências, montar casos clínicos, gerar conteúdos e organizar projetos de inovação em fisioterapia.</p><div class="metricgrid"><div class="metric"><strong>IA</strong><span>Agentes especializados</span></div><div class="metric"><strong>PBE</strong><span>Busca e síntese científica</span></div><div class="metric"><strong>Educação</strong><span>Aulas e trilhas premium</span></div><div class="metric"><strong>Gestão</strong><span>Operação e crescimento</span></div></div></div>
+        <div class="screen"><h2>Primeira entrega pública</h2><p><b>Pilates 5.0</b> já está no ar como módulo inicial do ecossistema: IA, visão computacional, IoT, LLMs, digital twins e Eletropilates.</p><a class="btn primary" href="./pilates-5/">Abrir módulo</a></div>
+      </div></div>
+    </div></section>
+
+    <section id="agentes"><div class="wrap"><h2 class="section-title">Agentes que fazem o trabalho pesado.</h2><p class="section-sub">O FisioHub nasce para orquestrar agentes especializados. Cada agente tem uma missão clara, lê o contexto do projeto e entrega saída útil. Nada de IA turista.</p>
+      <div class="grid">
+        <div class="card"><div class="icon">🔬</div><h3>Pesquisador PBE</h3><p>Busca literatura, hierarquiza evidências e transforma ciência em decisão clínica aplicável.</p><span class="tag">Ciência</span></div>
+        <div class="card"><div class="icon">🎓</div><h3>Professor Premium</h3><p>Cria planos de aula, roteiros, atividades, slides e avaliações com padrão de ensino moderno.</p><span class="tag">Educação</span></div>
+        <div class="card"><div class="icon">🧠</div><h3>Casos Clínicos</h3><p>Gera casos realistas para graduação, residência e pós, com raciocínio clínico e segurança.</p><span class="tag">Treinamento</span></div>
+        <div class="card"><div class="icon">📈</div><h3>Marketing Fisio</h3><p>Transforma conhecimento em posts, reels, carrosséis, ofertas e páginas de conversão.</p><span class="tag">Crescimento</span></div>
+        <div class="card"><div class="icon">🏥</div><h3>Gestão Hospitalar</h3><p>Ajuda a organizar indicadores, protocolos, treinamentos, operação e liderança de equipes.</p><span class="tag">Gestão</span></div>
+        <div class="card"><div class="icon">⚡</div><h3>Inovação Clínica</h3><p>Estrutura ideias, MVPs, produtos, patentes e tecnologias aplicadas à fisioterapia.</p><span class="tag">Futuro</span></div>
+      </div></div></section>
+
+    <section id="ecossistema"><div class="wrap"><h2 class="section-title">Um hub. Vários motores.</h2><p class="section-sub">O objetivo é criar uma ponte entre conhecimento científico, prática clínica e negócio digital. O fisioterapeuta entra com a experiência. A IA entra com velocidade. O resultado: escala.</p></div></section>
+
+    <section id="roadmap"><div class="wrap"><h2 class="section-title">Roadmap do MVP</h2><div class="roadmap"><div class="step"><b>01</b><h3>Landing Premium</h3><p>Entrada pública e posicionamento do produto.</p></div><div class="step"><b>02</b><h3>Dashboard</h3><p>Área central com módulos e agentes.</p></div><div class="step"><b>03</b><h3>Biblioteca</h3><p>Materiais, aulas, casos e evidências.</p></div><div class="step"><b>04</b><h3>Integrações</h3><p>IA, Drive, Hotmart, Lovable e automações.</p></div></div></div></section>
+  </main>
+  <footer class="footer"><div class="wrap">FisioHub © Fisio IA Academy — construindo o sistema operacional da fisioterapia aumentada.</div></footer>
+</body>
+</html>
