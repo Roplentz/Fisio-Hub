@@ -1,0 +1,45 @@
+:root{
+  --navy:#061A40;
+  --blue:#0D479A;
+  --cyan:#18C4D6;
+  --ice:#F4F8FB;
+  --white:#FFFFFF;
+  --text:#101828;
+  --muted:#667085;
+  --line:#E6EEF5;
+  --green:#12B76A;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Arial;background:var(--ice);color:var(--text)}
+button,a{font:inherit}
+.page{min-height:100vh}
+.topbar{height:76px;display:flex;align-items:center;justify-content:space-between;padding:0 6%;background:rgba(255,255,255,.78);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+.brand{display:flex;gap:12px;align-items:center}
+.logoMark{width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,var(--navy),var(--cyan));display:grid;place-items:center;color:white;box-shadow:0 12px 30px rgba(13,71,154,.22)}
+.brand strong{display:block;font-size:18px;letter-spacing:-.03em}.brand span{display:block;font-size:12px;color:var(--muted);margin-top:1px}
+.navlinks{display:flex;gap:26px;color:#344054;font-size:14px}
+.btn{border:0;border-radius:14px;padding:12px 18px;cursor:pointer;font-weight:700;display:inline-flex;align-items:center;gap:8px}
+.btn.primary{background:linear-gradient(135deg,var(--blue),var(--cyan));color:#fff;box-shadow:0 14px 30px rgba(13,71,154,.22)}
+.btn.secondary{background:#EAF7FA;color:var(--blue)}
+.btn.ghost{background:#fff;color:var(--blue);border:1px solid var(--line)}
+.btn.small{padding:10px 14px;font-size:14px}
+.hero{display:grid;grid-template-columns:1.05fr .95fr;gap:50px;padding:80px 6% 58px;align-items:center;background:radial-gradient(circle at 85% 20%,rgba(24,196,214,.25),transparent 32%),linear-gradient(180deg,#fff,var(--ice))}
+.heroText h1{font-size:64px;line-height:.96;letter-spacing:-.07em;margin:20px 0;color:var(--navy);max-width:780px}
+.heroText p{font-size:20px;line-height:1.55;color:var(--muted);max-width:680px}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:9px 12px;background:#EAF7FA;color:var(--blue);border-radius:999px;font-size:13px;font-weight:800}
+.actions{display:flex;gap:14px;margin-top:26px;flex-wrap:wrap}.trust{display:flex;gap:18px;margin-top:26px;flex-wrap:wrap;color:#475467;font-size:14px}.trust span{display:flex;align-items:center;gap:7px}
+.glass{background:rgba(255,255,255,.75);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.8);box-shadow:0 30px 80px rgba(6,26,64,.16)}
+.heroCard{border-radius:34px;padding:32px}.heroCard h3{font-size:32px;margin:18px 0 8px;color:var(--navy)}.heroCard p{color:var(--muted);line-height:1.5}
+.miniHeader{display:flex;justify-content:space-between;align-items:center;color:var(--blue);font-weight:800}
+.progressBlock{margin:26px 0}.progressTitle{display:flex;justify-content:space-between;font-size:14px;margin-bottom:8px}.progress{height:10px;background:#E4EDF5;border-radius:999px;overflow:hidden}.progress i{display:block;height:100%;background:linear-gradient(90deg,var(--blue),var(--cyan));border-radius:999px}
+.cardGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:22px}.cardGrid div{background:#F8FBFD;border:1px solid var(--line);border-radius:18px;padding:16px}.cardGrid b{display:block;font-size:28px;color:var(--navy)}.cardGrid span{font-size:13px;color:var(--muted)}
+.features{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;padding:22px 6% 70px}.feature{background:#fff;border:1px solid var(--line);border-radius:24px;padding:24px;box-shadow:0 14px 34px rgba(6,26,64,.05)}.feature svg{color:var(--blue)}.feature h3{margin:18px 0 8px;color:var(--navy)}.feature p{color:var(--muted);line-height:1.5}
+.appShell{display:grid;grid-template-columns:280px 1fr;min-height:100vh}.sidebar{background:#fff;border-right:1px solid var(--line);padding:24px;display:flex;flex-direction:column;gap:10px}.sidebar.dark{background:var(--navy);color:white}.sidebar.dark .brand span{color:#B7C7D9}.side{border:0;background:transparent;text-align:left;padding:13px 14px;border-radius:14px;display:flex;align-items:center;gap:10px;color:#475467;cursor:pointer}.sidebar.dark .side{color:#D7E2EE}.side.active{background:#EAF7FA;color:var(--blue);font-weight:800}.sidebar.dark .side.active{background:rgba(24,196,214,.16);color:white}
+.workspace{padding:30px}.workspaceTop{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}.workspaceTop h1{margin:4px 0 0;font-size:34px;letter-spacing:-.04em;color:var(--navy)}.eyebrow{text-transform:uppercase;letter-spacing:.12em;font-size:12px;color:var(--blue);font-weight:900;margin:0}.topActions{display:flex;gap:16px;align-items:center;color:var(--muted)}
+.studentGrid{display:grid;grid-template-columns:1.3fr .9fr .9fr;gap:18px}.panel{background:#fff;border:1px solid var(--line);border-radius:26px;padding:24px;box-shadow:0 14px 34px rgba(6,26,64,.05)}.panel.wide{grid-column:span 2}.panel h2,.panel h3{margin:14px 0 10px;color:var(--navy)}.panel p{color:var(--muted);line-height:1.5}
+.radarMock{display:grid;gap:10px;margin-top:18px}.radarMock span{background:#F2F8FB;border:1px solid var(--line);padding:12px;border-radius:14px;font-weight:700;color:var(--blue)}
+.canvasGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.canvasGrid div{background:#F8FBFD;border:1px solid var(--line);border-radius:18px;padding:16px}.canvasGrid b{color:var(--navy)}.canvasGrid p{margin:6px 0 0;font-size:14px}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:18px}.metrics div{background:#fff;border:1px solid var(--line);border-radius:22px;padding:22px}.metrics b{display:block;font-size:34px;color:var(--navy)}.metrics span{color:var(--muted)}
+.pipeline{display:flex;gap:10px;flex-wrap:wrap}.pipeline span{padding:12px 14px;border-radius:999px;background:#F2F4F7;color:#667085;font-weight:800;font-size:13px}.pipeline .done{background:#EAF7FA;color:var(--blue)}
+.list p{display:flex;align-items:center;gap:8px;margin:12px 0}
+@media(max-width:900px){.hero,.appShell{grid-template-columns:1fr}.features,.metrics,.studentGrid{grid-template-columns:1fr}.panel.wide{grid-column:span 1}.sidebar{display:none}.heroText h1{font-size:44px}.navlinks{display:none}}
