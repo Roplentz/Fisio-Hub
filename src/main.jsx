@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Brain, Sparkles, GraduationCap, LayoutDashboard, Users, ShieldCheck, Compass, LineChart, BookOpen, Bot, Settings, Search, Bell, CheckCircle2, Activity, Rocket, ClipboardList } from 'lucide-react';
+import { Brain, Sparkles, GraduationCap, LayoutDashboard, Users, ShieldCheck, Compass, LineChart, BookOpen, Bot, Settings, Search, Bell, CheckCircle2, Activity, Rocket, ClipboardList, ArrowRight } from 'lucide-react';
+import { adminMetrics, canvas, intelligenceMap, studentStats } from './product-data.js';
 import './styles.css';
 
 const Brand = () => (
@@ -8,40 +9,48 @@ const Brand = () => (
     <div className="logoMark"><Brain size={22}/></div>
     <div>
       <strong>FisioHub</strong>
-      <span>Academy</span>
+      <span>Academy MVP</span>
     </div>
   </div>
 );
 
 const Pill = ({children}) => <span className="pill">{children}</span>;
+const MetricCard = ({value, label}) => <div><b>{value}</b><span>{label}</span></div>;
 
 function LandingPage({ setPage }) {
+  const features = [
+    ['FisioHub Discovery™', 'Onboarding conversacional para mapear objetivos, inteligências e competências.', Compass],
+    ['Professional Digital Twin™', 'Um perfil vivo que acompanha a evolução profissional do usuário.', Activity],
+    ['Living Curriculum™', 'Cursos vivos, atualizados por evidências e revisão científica.', BookOpen],
+    ['Tutor IA', 'Um agente focado no curso, nos casos clínicos e na jornada do aluno.', Bot],
+  ];
+
   return (
     <main className="page landing">
       <nav className="topbar">
         <Brand />
         <div className="navlinks">
-          <a>Discovery</a><a>Academy</a><a>IA Tutor</a><a>Comunidade</a>
+          <a>Discovery</a><a>Academy</a><a>Tutor IA</a><a>Admin</a>
         </div>
         <button className="btn ghost" onClick={() => setPage('student')}>Entrar</button>
       </nav>
 
       <section className="hero">
         <div className="heroText">
-          <Pill><Sparkles size={14}/> A plataforma que evolui com sua carreira</Pill>
-          <h1>A primeira Academy que conhece você antes de ensinar.</h1>
+          <Pill><Sparkles size={14}/> MVP FisioHub Academy</Pill>
+          <h1>A Academy que conhece você antes de ensinar.</h1>
           <p>
-            O FisioHub combina IA, ciência e experiência para criar uma jornada personalizada
-            de desenvolvimento profissional para fisioterapeutas.
+            Uma experiência inicial para validar o FisioHub: Discovery™, Professional Digital Twin™,
+            Cognitive Compass™, trilha de IA e Tutor IA em uma jornada simples para fisioterapeutas.
           </p>
           <div className="actions">
-            <button className="btn primary" onClick={() => setPage('student')}>Ver página do aluno</button>
+            <button className="btn primary" onClick={() => setPage('student')}>Ver página do aluno <ArrowRight size={17}/></button>
             <button className="btn secondary" onClick={() => setPage('admin')}>Ver admin</button>
           </div>
           <div className="trust">
-            <span><CheckCircle2 size={16}/> Discovery™</span>
-            <span><CheckCircle2 size={16}/> Professional Digital Twin™</span>
-            <span><CheckCircle2 size={16}/> Cognitive Compass™</span>
+            <span><CheckCircle2 size={16}/> Complexidade invisível</span>
+            <span><CheckCircle2 size={16}/> Ciência + IA</span>
+            <span><CheckCircle2 size={16}/> Evolução profissional</span>
           </div>
         </div>
 
@@ -51,26 +60,19 @@ function LandingPage({ setPage }) {
             <Compass size={20}/>
           </div>
           <h3>IA aplicada à fisioterapia</h3>
-          <p>Recomendado porque seu objetivo é aumentar produtividade e criar soluções digitais.</p>
+          <p>Recomendado porque seu objetivo é aumentar produtividade, criar aulas melhores e usar IA com segurança.</p>
           <div className="progressBlock">
             <div className="progressTitle"><span>Trilha inicial</span><b>42%</b></div>
             <div className="progress"><i style={{width:'42%'}} /></div>
           </div>
           <div className="cardGrid">
-            <div><b>3</b><span>aulas hoje</span></div>
-            <div><b>1</b><span>caso clínico</span></div>
-            <div><b>2</b><span>agentes IA</span></div>
+            {studentStats.slice(1).map((item) => <MetricCard key={item.label} {...item}/>) }
           </div>
         </div>
       </section>
 
       <section className="features">
-        {[
-          ['FisioHub Discovery™', 'Onboarding conversacional para mapear objetivos, inteligências e competências.', Compass],
-          ['Professional Digital Twin™', 'Um perfil vivo que acompanha a evolução profissional do usuário.', Activity],
-          ['Living Curriculum™', 'Cursos vivos, atualizados por evidências e revisão científica.', BookOpen],
-          ['Tutor IA', 'Um agente focado no curso, nos casos clínicos e na jornada do aluno.', Bot],
-        ].map(([title, text, Icon]) => (
+        {features.map(([title, text, Icon]) => (
           <div className="feature" key={title}>
             <Icon size={24}/>
             <h3>{title}</h3>
@@ -82,19 +84,24 @@ function LandingPage({ setPage }) {
   )
 }
 
+function Sidebar({ mode, setPage }) {
+  return (
+    <aside className={`sidebar ${mode === 'admin' ? 'dark' : ''}`}>
+      <Brand />
+      <button className="side active"><LayoutDashboard size={18}/> Dashboard</button>
+      <button className="side"><GraduationCap size={18}/> Trilhas</button>
+      <button className="side"><Compass size={18}/> Compass</button>
+      <button className="side"><Bot size={18}/> Agentes</button>
+      <button className="side"><BookOpen size={18}/> Conteúdos</button>
+      <button className="side" onClick={() => setPage('landing')}>← Landing</button>
+    </aside>
+  )
+}
+
 function StudentPage({ setPage }) {
   return (
     <main className="appShell">
-      <aside className="sidebar">
-        <Brand />
-        <button className="side active"><LayoutDashboard size={18}/> Dashboard</button>
-        <button className="side"><GraduationCap size={18}/> Minha trilha</button>
-        <button className="side"><Compass size={18}/> Compass</button>
-        <button className="side"><Bot size={18}/> Tutor IA</button>
-        <button className="side"><BookOpen size={18}/> Biblioteca</button>
-        <button className="side" onClick={() => setPage('landing')}>← Landing</button>
-      </aside>
-
+      <Sidebar setPage={setPage}/>
       <section className="workspace">
         <header className="workspaceTop">
           <div>
@@ -105,7 +112,7 @@ function StudentPage({ setPage }) {
         </header>
 
         <div className="studentGrid">
-          <div className="panel wide">
+          <div className="panel wide highlight">
             <Pill><Compass size={14}/> Cognitive Compass™</Pill>
             <h2>Melhor próximo passo</h2>
             <p>Concluir a aula “Como usar IA para criar casos clínicos” e aplicar no desafio prático.</p>
@@ -115,7 +122,7 @@ function StudentPage({ setPage }) {
           <div className="panel">
             <h3>Professional Digital Twin™</h3>
             <div className="radarMock">
-              <span>IA 82%</span><span>Clínica 76%</span><span>Pesquisa 61%</span><span>Gestão 54%</span>
+              {intelligenceMap.map((item) => <span key={item.label}>{item.label} {item.value}</span>)}
             </div>
           </div>
 
@@ -131,10 +138,7 @@ function StudentPage({ setPage }) {
           <div className="panel wide">
             <h3>Professional Evolution Canvas™</h3>
             <div className="canvasGrid">
-              <div><b>Pontos fortes</b><p>Ciência, inovação, visão sistêmica.</p></div>
-              <div><b>Próximos desenvolvimentos</b><p>Automação, produto e funil comercial.</p></div>
-              <div><b>Oportunidades</b><p>Curso IA, agentes clínicos, comunidade.</p></div>
-              <div><b>Pontos de atenção</b><p>Priorizar MVP antes de ampliar módulos.</p></div>
+              {canvas.map((item) => <div key={item.title}><b>{item.title}</b><p>{item.text}</p></div>)}
             </div>
           </div>
 
@@ -152,17 +156,7 @@ function StudentPage({ setPage }) {
 function AdminPage({ setPage }) {
   return (
     <main className="appShell admin">
-      <aside className="sidebar dark">
-        <Brand />
-        <button className="side active"><LayoutDashboard size={18}/> Visão geral</button>
-        <button className="side"><Users size={18}/> Alunos</button>
-        <button className="side"><GraduationCap size={18}/> Cursos</button>
-        <button className="side"><Bot size={18}/> Agentes</button>
-        <button className="side"><LineChart size={18}/> Analytics</button>
-        <button className="side"><ShieldCheck size={18}/> Governança</button>
-        <button className="side" onClick={() => setPage('landing')}>← Landing</button>
-      </aside>
-
+      <Sidebar mode="admin" setPage={setPage}/>
       <section className="workspace">
         <header className="workspaceTop">
           <div>
@@ -173,10 +167,7 @@ function AdminPage({ setPage }) {
         </header>
 
         <div className="metrics">
-          <div><b>128</b><span>alunos beta</span></div>
-          <div><b>74%</b><span>Discovery concluído</span></div>
-          <div><b>42%</b><span>progresso médio</span></div>
-          <div><b>91%</b><span>satisfação inicial</span></div>
+          {adminMetrics.map((item) => <MetricCard key={item.label} {...item}/>) }
         </div>
 
         <div className="studentGrid">
