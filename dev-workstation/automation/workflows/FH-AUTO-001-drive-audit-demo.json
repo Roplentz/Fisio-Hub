@@ -1,0 +1,111 @@
+{
+  "name": "FH-AUTO-001 - Auditoria Drive Demo",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Executar manualmente",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "file-id",
+              "name": "file_id",
+              "value": "demo-drive-file-id",
+              "type": "string"
+            },
+            {
+              "id": "file-name",
+              "name": "name",
+              "value": "Redação",
+              "type": "string"
+            },
+            {
+              "id": "mime-type",
+              "name": "mime_type",
+              "value": "application/vnd.google-apps.document",
+              "type": "string"
+            },
+            {
+              "id": "modified-time",
+              "name": "modified_time",
+              "value": "2026-07-10T12:00:00Z",
+              "type": "string"
+            },
+            {
+              "id": "content-preview",
+              "name": "content_preview",
+              "value": "CONSTITUIÇÃO DO FISIOHUB. Missão, visão, valores, ética e inteligência artificial responsável.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "demo-input",
+      "name": "Arquivo de demonstração",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const genericNames = ['redação', 'documento', 'sem título', 'untitled'];\n\nreturn items.map((item) => {\n  const source = item.json || {};\n  const name = String(source.name || '').trim();\n  const content = String(source.content_preview || '').toUpperCase();\n  const normalizedName = name.toLowerCase();\n\n  let domain = '99_ARCHIVE';\n  let documentType = 'Unclassified';\n  let prefix = 'FH-DOC';\n\n  if (/CONSTITUIÇÃO|MISSÃO|VALORES|ÉTICA/.test(content)) {\n    domain = '00_CONSTITUTION';\n    documentType = 'Constitution';\n    prefix = 'FH-CONST';\n  } else if (/MASTER PLAN|ROADMAP|OKR|KPI/.test(content)) {\n    domain = '01_MASTER_PLAN';\n    documentType = 'Master Plan';\n    prefix = 'FH-MP';\n  } else if (/GOVERNANÇA|EXECUTIVE OS|CONSELHO/.test(content)) {\n    domain = '02_GOVERNANCE';\n    documentType = 'Governance';\n    prefix = 'FH-GOV';\n  } else if (/ARQUITETURA|API|BACKEND|FRONTEND|LANGGRAPH/.test(content)) {\n    domain = '03_ARCHITECTURE';\n    documentType = 'Architecture';\n    prefix = 'FH-ARCH';\n  } else if (/CLINICAL AI KERNEL|DECISION ENGINE|DIGITAL TWIN/.test(content)) {\n    domain = '04_CLINICAL_AI_KERNEL';\n    documentType = 'Clinical AI Kernel';\n    prefix = 'FH-KERNEL';\n  } else if (/ONTOLOGY|KNOWLEDGE GRAPH|KNOWLEDGE GENOME/.test(content)) {\n    domain = '05_KNOWLEDGE_GRAPH';\n    documentType = 'Knowledge Graph';\n    prefix = 'FH-KG';\n  } else if (/PILATESVISION|ORTHOVISION|NEUROVISION/.test(content)) {\n    domain = '06_PRODUCTS';\n    documentType = 'Product';\n    prefix = 'FH-PROD';\n  }\n\n  const genericName = genericNames.includes(normalizedName);\n  const duplicateRisk = genericName ? 'medium' : 'low';\n\n  return {\n    json: {\n      audit_version: '0.1',\n      audited_at: new Date().toISOString(),\n      source: {\n        file_id: source.file_id || null,\n        name,\n        mime_type: source.mime_type || null,\n        modified_time: source.modified_time || null\n      },\n      classification: {\n        domain,\n        document_type: documentType,\n        suggested_id: `${prefix}-001`,\n        status_recommendation: 'Under Review'\n      },\n      quality: {\n        generic_name: genericName,\n        duplicate_risk: duplicateRisk,\n        requires_human_approval: true\n      },\n      recommendation: genericName\n        ? 'Renomear, comparar com ativos vigentes e somente depois decidir promoção, consolidação ou arquivamento.'\n        : 'Comparar com o Índice Mestre antes de registrar como novo ativo.',\n      dry_run: true\n    }\n  };\n});"
+      },
+      "id": "cko-classifier",
+      "name": "Classificador CKO",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 300]
+    }
+  ],
+  "connections": {
+    "Executar manualmente": {
+      "main": [
+        [
+          {
+            "node": "Arquivo de demonstração",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Arquivo de demonstração": {
+      "main": [
+        [
+          {
+            "node": "Classificador CKO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "8a8028dc-89ce-4ffc-962e-4f003305a001",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "name": "FisioHub"
+    },
+    {
+      "name": "CKO"
+    },
+    {
+      "name": "Documentation OS"
+    }
+  ]
+}
