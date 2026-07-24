@@ -3,13 +3,21 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from .avatar import avatar_manifest
 from .models import VideoBrief, VideoPackage
+from .providers import ScriptProvider, select_provider
+from .render_plan import build_render_plan
 from .templates import TEMPLATES
 
 
-def generate_video_package(brief: VideoBrief) -> VideoPackage:
-    hook = _build_hook(brief)
-    thesis = _build_thesis(brief)
+def generate_video_package(
+    brief: VideoBrief,
+    provider: ScriptProvider | None = None,
+) -> VideoPackage:
+    selected_provider = provider or select_provider("auto")
+    generated = selected_provider.generate(brief)
+    hook = generated["hook"]
+    thesis = generated["thesis"]
 
     template = TEMPLATES.get(brief.format)
     if template is None:
@@ -22,12 +30,13 @@ def generate_video_package(brief: VideoBrief) -> VideoPackage:
         hook=hook,
         thesis=thesis,
         scenes=scenes,
-        caption=_build_caption(brief, thesis),
+        caption=generated["caption"],
         hashtags=_build_hashtags(brief),
         warnings=warnings,
         metadata={
-            "format_version": "0.1.0",
-            "workflow": "brief>script>storyboard>quality>export",
+            "format_version": "0.2.0",
+            "workflow": "brief>ai>script>storyboard>avatar>render-plan>quality>export",
+            "script_provider": selected_provider.name,
             "human_review_required": True,
         },
     )
@@ -47,28 +56,15 @@ def export_package(package: VideoPackage, output_dir: str | Path) -> Path:
     (out / "captions.srt").write_text(_to_srt(package), encoding="utf-8")
     (out / "caption.txt").write_text(package.caption, encoding="utf-8")
     (out / "asset-list.txt").write_text(_asset_list(package), encoding="utf-8")
+    (out / "avatar-manifest.json").write_text(
+        json.dumps(avatar_manifest(package), ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    (out / "render-plan.json").write_text(
+        json.dumps(build_render_plan(package), ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
     return json_path
-
-
-def _build_hook(brief: VideoBrief) -> str:
-    theme = brief.theme.strip().rstrip(".?!")
-    return f"A verdade sobre {theme} que quase ninguém explica."
-
-
-def _build_thesis(brief: VideoBrief) -> str:
-    return (
-        f"{brief.theme.capitalize()} não deve ser tratado como moda ou atalho. "
-        "O valor aparece quando a ferramenta amplia o raciocínio sem substituir a responsabilidade humana."
-    )
-
-
-def _build_caption(brief: VideoBrief, thesis: str) -> str:
-    return (
-        f"{thesis}\n\n"
-        "Tecnologia útil não elimina conhecimento: ela aumenta a capacidade de quem sabe perguntar, "
-        "avaliar e decidir.\n\n"
-        f"{brief.cta}"
-    )
 
 
 def _build_hashtags(brief: VideoBrief) -> list[str]:
@@ -94,6 +90,7 @@ def _script_markdown(package: VideoPackage) -> str:
         "",
         f"**Formato:** {package.brief.format}",
         f"**Duração:** {package.brief.duration_seconds}s",
+        f"**Provedor:** {package.metadata.get('script_provider', 'desconhecido')}",
         f"**Hook:** {package.hook}",
         "",
         "## Storyboard",
