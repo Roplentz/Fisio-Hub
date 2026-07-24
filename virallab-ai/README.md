@@ -1,86 +1,114 @@
 # ViralLab AI
 
-Sistema de engenharia reversa e geração assistida de conteúdo curto para especialistas em saúde.
-
-## Objetivo
-
-Transformar vídeos de referência, ideias e conhecimento técnico em roteiros, storyboards, pacotes de edição e vídeos reproduzíveis, mantendo originalidade, identidade e credibilidade.
+Sistema de engenharia reversa, geração, treinamento assistido e renderização de vídeos curtos para especialistas em saúde.
 
 ## Estado atual
 
-**MVP Core v0.3 — geração, avatar, áudio, legendas e renderização FFmpeg.**
+**MVP v0.4 — interface web didática, aprendizado local e vídeo completo.**
 
 Já implementado:
 
+- interface Streamlit em cinco etapas;
 - brief estruturado;
 - Formato 01 — Professor Cinemático;
 - geração local gratuita ou opcional com Gemini;
-- hook, tese e cenas cronometradas;
+- hook, tese, roteiro e cenas cronometradas;
 - storyboard e plano de edição;
-- manifesto de falas do avatar;
-- plano de renderização 1080 × 1920;
-- renderização FFmpeg com assets reais ou cartões temporários;
-- preservação da voz dos clipes de avatar;
-- silêncio técnico nos trechos sem áudio;
-- trilha opcional com volume controlado;
-- legendas SRT queimadas no vídeo final;
-- exportação JSON, Markdown, SRT, legenda e lista de assets;
-- guardrails de privacidade e revisão científica;
-- interface por linha de comando;
-- testes automatizados e vídeo curto de fumaça no GitHub Actions.
+- upload guiado de avatar, imagens, capturas e música;
+- renderização vertical 1080 × 1920 com FFmpeg;
+- preservação da voz, trilha controlada e legendas incorporadas;
+- cartões temporários para assets ausentes;
+- registro transparente de feedback em JSONL;
+- painel de aprovação, nota média e estilos preferidos;
+- CLI, testes automatizados e vídeo de fumaça no GitHub Actions.
 
-## Fluxo do produto
+## Fluxo do MVP
 
 ```text
-Tema ou vídeo de referência
-        ↓
-Brief / Reverse Engineer
-        ↓
+Brief
+  ↓
 IA local ou Gemini
-        ↓
-Hook + tese + template
-        ↓
+  ↓
 Roteiro e storyboard
-        ↓
-Avatar + assets + capturas
-        ↓
-Voz + trilha + legendas
-        ↓
-Renderização FFmpeg
-        ↓
-Publicação e métricas
-        ↓
-Learning Engine
+  ↓
+Revisão humana
+  ↓
+Avatar + assets + trilha
+  ↓
+FFmpeg + legendas
+  ↓
+video-final.mp4
+  ↓
+Feedback do criador
+  ↓
+Base de aprendizado JSONL
 ```
 
-## Instalação
+## Instalação da interface
 
-Requer Python 3.11 ou superior. Para gerar o MP4, FFmpeg e FFprobe precisam estar instalados e disponíveis no terminal.
+Requer Python 3.11 ou superior. Para renderizar MP4, FFmpeg e FFprobe precisam estar instalados.
 
 ```bash
 cd virallab-ai
-python -m pip install -e .
+python -m pip install -e ".[ui]"
+streamlit run app.py
 ```
 
-Para desenvolvimento e testes:
+O navegador abrirá a interface local. O uso está dividido em:
 
-```bash
-python -m pip install -e ".[test]"
-pytest -q
+1. **Brief** — tema, objetivo, público, duração, formato e CTA.
+2. **Roteiro e cenas** — revisão do hook, tese e storyboard.
+3. **Assets** — envio guiado de avatar, B-roll, imagens e trilha.
+4. **Render** — geração do MP4 ou simulação dos comandos.
+5. **Ensinar** — nota, aprovação, hook preferido e observações.
+
+## Como o aprendizado funciona
+
+O MVP não altera silenciosamente um modelo de IA. Cada decisão é registrada em:
+
+```text
+workspace/learning/feedback.jsonl
 ```
 
-## Gerar apenas o pacote
+Cada linha contém:
 
-```bash
-virallab "inteligência artificial na fisioterapia" \
-  --provider local \
-  --duration 60 \
-  --format professor_cinematico \
-  --cta "Siga o Professor RP para aprender IA aplicada à saúde." \
-  --output output/teste-01
+- projeto e tema;
+- nota do roteiro;
+- aprovação ou rejeição;
+- hook original;
+- hook preferido;
+- estilo que deve ser reforçado;
+- observações do criador;
+- data e hora.
+
+Essa base poderá alimentar futuramente:
+
+- exemplos nos prompts;
+- ranking de hooks;
+- regras do DNA Rodrigo;
+- avaliação automática de roteiros;
+- fine-tuning ou RAG, quando houver volume e qualidade suficientes.
+
+## Workspace
+
+```text
+workspace/
+├── projects/
+│   └── <project-id>/
+│       ├── assets/
+│       ├── generated/
+│       ├── video-package.json
+│       ├── avatar-manifest.json
+│       ├── render-plan.json
+│       ├── captions.srt
+│       └── video-final.mp4
+└── learning/
+    └── feedback.jsonl
 ```
 
-## Gerar e renderizar o vídeo completo
+## Uso pela linha de comando
+
+Gerar e renderizar:
 
 ```bash
 virallab "inteligência artificial na fisioterapia" \
@@ -92,19 +120,7 @@ virallab "inteligência artificial na fisioterapia" \
   --render
 ```
 
-Quando algum asset ainda não existe, o renderizador cria um cartão temporário com o texto daquela cena. Isso permite validar duração, ritmo e sequência antes de produzir avatar e B-roll definitivos.
-
-## Adicionar a trilha
-
-A forma mais simples é salvar a música em:
-
-```text
-output/teste-01/assets/music.mp3
-```
-
-O renderizador a encontra automaticamente e usa o volume padrão de -25 dB.
-
-Também é possível indicar outro arquivo:
+Trilha opcional:
 
 ```bash
 virallab "IA na fisioterapia" \
@@ -114,120 +130,58 @@ virallab "IA na fisioterapia" \
   --render
 ```
 
-As vozes presentes nos vídeos `avatar-scene-XX.mp4` são preservadas. Cenas sem áudio recebem uma faixa silenciosa para evitar falhas na concatenação.
-
-## Legendas
-
-O arquivo `captions.srt` é incorporado ao vídeo por padrão. Para exportar sem legendas queimadas:
+Sem legendas incorporadas:
 
 ```bash
-virallab "IA na fisioterapia" \
-  --output output/teste-01 \
-  --no-captions \
-  --render
+virallab "IA na fisioterapia" --no-captions --render
 ```
 
-## Inspecionar sem renderizar
+Simular sem executar o FFmpeg:
 
 ```bash
-virallab "IA na fisioterapia" \
-  --output output/teste-01 \
-  --render-dry-run
+virallab "IA na fisioterapia" --render-dry-run
 ```
 
 ## Assets esperados
 
-O `render-plan.json` define os caminhos esperados. Exemplos:
+O `render-plan.json` define os nomes. Exemplos:
 
 ```text
-output/teste-01/
-├── assets/
-│   ├── avatar-scene-02.mp4
-│   ├── avatar-scene-04.mp4
-│   ├── screen-scene-05.mp4
-│   ├── proof-scene-06.jpg
-│   └── music.mp3
-├── generated/
-├── video-package.json
-├── avatar-manifest.json
-├── render-plan.json
-├── script.md
-├── captions.srt
-├── caption.txt
-├── asset-list.txt
-└── video-final.mp4
+assets/
+├── avatar-scene-02.mp4
+├── avatar-scene-04.mp4
+├── screen-scene-05.mp4
+├── proof-scene-06.jpg
+└── music.mp3
 ```
 
-O renderizador aceita MP4, MOV, MKV, WEBM, PNG, JPG, JPEG e WEBP. Vídeos e imagens são redimensionados em modo `cover` para o formato vertical.
+O renderizador aceita MP4, MOV, MKV, WEBM, PNG, JPG, JPEG e WEBP. Materiais são ajustados em modo `cover` para 9:16.
 
 ## Gemini opcional
 
-Defina `GEMINI_API_KEY` e use:
+Defina `GEMINI_API_KEY` e selecione Gemini na interface ou execute:
 
 ```bash
 virallab "IA na fisioterapia" --provider gemini --render
 ```
 
-Sem chave, `--provider auto` retorna automaticamente ao provedor local.
+Sem chave, o modo `auto` retorna ao provedor local.
 
-## Arquivos gerados
+## Desenvolvimento e testes
 
-```text
-video-package.json
-script.md
-captions.srt
-caption.txt
-asset-list.txt
-avatar-manifest.json
-render-plan.json
-generated/segments/
-generated/concat.txt
-generated/stitched.mp4
-generated/ffmpeg-commands.json
-video-final.mp4
+```bash
+python -m pip install -e ".[all]"
+pytest -q
+python -m py_compile app.py
 ```
 
 ## Próximas etapas
 
-1. Interface web para preencher o brief e revisar o roteiro.
-2. Importação assistida dos vídeos gerados no HeyGen.
-3. Biblioteca de trilhas e B-roll licenciados.
-4. Templates visuais de legenda e identidade FisioHub.
-5. Learning Engine baseado em métricas reais de publicação.
-
-## Stack gratuita prioritária
-
-- Gemini API / Google AI Studio;
-- Whisper ou whisper.cpp;
-- FFmpeg e FFprobe;
-- Remotion;
-- Ollama;
-- ComfyUI e modelos abertos;
-- Piper TTS;
-- Google Drive;
-- GitHub Actions.
-
-## Estrutura
-
-```text
-virallab-ai/
-├── README.md
-├── pyproject.toml
-├── docs/
-├── prompts/
-├── schemas/
-├── tests/
-└── src/virallab/
-    ├── __init__.py
-    ├── avatar.py
-    ├── cli.py
-    ├── generator.py
-    ├── models.py
-    ├── providers.py
-    ├── renderer.py
-    ├── render_plan.py
-    └── templates.py
-```
+1. Aplicar automaticamente os exemplos aprovados aos prompts.
+2. Importar vídeos do HeyGen com associação automática às cenas.
+3. Criar biblioteca licenciada de trilhas e B-roll.
+4. Adicionar templates visuais da identidade FisioHub.
+5. Conectar métricas reais de Instagram, TikTok e YouTube ao Learning Engine.
 
 ## Princípios
 
@@ -236,4 +190,5 @@ virallab-ai/
 - Processamento local quando reduzir custo ou proteger dados.
 - Revisão humana antes da publicação.
 - Proibição de dados clínicos identificáveis em serviços públicos de IA.
-- `video-package.json` como fonte única de verdade do processo.
+- Aprendizado auditável: nenhuma preferência é alterada sem registro.
+- `video-package.json` permanece a fonte única de verdade da produção.
