@@ -1,0 +1,54 @@
+name: ViralLab CI
+
+on:
+  pull_request:
+    paths:
+      - "virallab-ai/**"
+      - ".github/workflows/virallab-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "virallab-ai/**"
+      - ".github/workflows/virallab-ci.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: virallab-ai
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Install package and tests
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . pytest
+
+      - name: Run tests
+        run: pytest -q
+
+      - name: Render smoke video
+        run: |
+          virallab "IA na fisioterapia" \
+            --provider local \
+            --duration 8 \
+            --output output/ci-smoke \
+            --render
+          test -s output/ci-smoke/video-final.mp4
+
+      - name: Upload smoke artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: virallab-smoke-video
+          path: virallab-ai/output/ci-smoke/
