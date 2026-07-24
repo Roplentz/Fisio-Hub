@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import json
 import os
-import urllib.error
-import urllib.request
 from dataclasses import asdict
 from typing import Protocol
 
+from .gemini_client import GeminiAPIError, configured_model, generate_json, get_api_key
 from .models import VideoBrief
 
 
@@ -39,51 +38,34 @@ class LocalRuleProvider:
 
 
 class GeminiProvider:
-    """Minimal Gemini REST adapter using only the Python standard library."""
+    """Gemini provider using the shared resilient REST client."""
 
     name = "gemini"
 
     def __init__(self, api_key: str | None = None, model: str | None = None) -> None:
-        self.api_key = api_key or os.getenv("GEMINI_API_KEY", "")
-        self.model = model or os.getenv("VIRALLAB_GEMINI_MODEL", "gemini-2.5-flash")
-        if not self.api_key:
+        if api_key:
+            os.environ["GEMINI_API_KEY"] = api_key.strip()
+        self.model = model or configured_model()
+        if not get_api_key():
             raise ValueError("GEMINI_API_KEY não configurada.")
 
     def generate(self, brief: VideoBrief) -> dict[str, str]:
-        prompt = _build_prompt(brief)
-        endpoint = (
-            "https://generativelanguage.googleapis.com/v1beta/models/"
-            f"{self.model}:generateContent?key={self.api_key}"
-        )
-        payload = {
-            "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {
-                "responseMimeType": "application/json",
-                "temperature": 0.7,
-            },
-        }
-        request = urllib.request.Request(
-            endpoint,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
         try:
-            with urllib.request.urlopen(request, timeout=45) as response:
-                result = json.loads(response.read().decode("utf-8"))
-        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+            data, used_model = generate_json(
+                _build_prompt(brief),
+                model=self.model,
+                temperature=0.7,
+                timeout=60,
+            )
+        except GeminiAPIError as exc:
             raise RuntimeError(f"Falha ao consultar Gemini: {exc}") from exc
-
-        try:
-            text = result["candidates"][0]["content"]["parts"][0]["text"]
-            data = json.loads(text)
-        except (KeyError, IndexError, TypeError, json.JSONDecodeError) as exc:
-            raise RuntimeError("Resposta inesperada do Gemini.") from exc
 
         required = {"hook", "thesis", "caption"}
         missing = required.difference(data)
         if missing:
             raise RuntimeError(f"Gemini não retornou campos obrigatórios: {sorted(missing)}")
+
+        self.model = used_model
         return {key: str(data[key]).strip() for key in required}
 
 
@@ -96,7 +78,7 @@ def select_provider(name: str = "auto") -> ScriptProvider:
     if normalized != "auto":
         raise ValueError(f"Provedor desconhecido: {name}")
 
-    if os.getenv("GEMINI_API_KEY"):
+    if get_api_key():
         try:
             return GeminiProvider()
         except ValueError:
