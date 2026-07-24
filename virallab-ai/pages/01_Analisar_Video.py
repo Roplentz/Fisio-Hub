@@ -47,13 +47,14 @@ st.markdown(
 )
 st.markdown(
     """
-    <section class="rp-head"><div class="rp-kicker">Engenharia reversa ética · Sprint 2</div>
-    <h1>Análise multimodal de vídeo</h1><p>Fala, cenas, frames-chave, rosto, enquadramento, texto na tela e sincronização narrativa.</p></section>
+    <section class="rp-head"><div class="rp-kicker">MVP 0.7 · Engenharia reversa multimodal</div>
+    <h1>Analise um vídeo e transforme sua arquitetura em conteúdo original</h1>
+    <p>O ViralLab combina fala, narrativa, cenas, frames-chave, rosto, enquadramento, texto na tela e sincronização audiovisual.</p></section>
     """,
     unsafe_allow_html=True,
 )
 st.markdown(
-    '<div class="rp-note"><strong>Processamento local:</strong> o sistema extrai apenas frames representativos. OCR funciona quando o Tesseract está disponível; sem ele, o ViralLab estima a presença de texto visualmente.</div>',
+    '<div class="rp-note"><strong>Fluxo integrado:</strong> após a análise, você pode gerar uma nova versão RP e continuar diretamente no Studio com o mesmo projeto.</div>',
     unsafe_allow_html=True,
 )
 
@@ -72,7 +73,7 @@ if uploaded is not None:
         video_path.write_bytes(uploaded.getbuffer())
         st.session_state.upload_key = upload_key
         st.session_state.analysis_video_path = str(video_path)
-        for key in ("video_analysis", "semantic_analysis", "visual_analysis", "multimodal_timeline"):
+        for key in ("video_analysis", "semantic_analysis", "visual_analysis", "multimodal_timeline", "analysis_blueprint"):
             st.session_state.pop(key, None)
     else:
         video_path = Path(st.session_state.analysis_video_path)
@@ -90,10 +91,27 @@ if uploaded is not None:
                 visual = analyze_visuals(video_path, output_dir=frames_dir, scene_threshold=threshold, max_moments=max_moments)
                 st.write("4/4 · Sincronizando fala e imagem no mapa temporal...")
                 timeline = build_multimodal_timeline(semantic, visual)
+                blueprint = {
+                    "source": uploaded.name,
+                    "duration_seconds": structural.duration_seconds,
+                    "scene_count": structural.estimated_scenes,
+                    "average_scene_seconds": structural.average_scene_seconds,
+                    "hook_text": semantic.hook_text,
+                    "hook_score": semantic.hook_score,
+                    "cta_text": semantic.cta_text,
+                    "cta_score": semantic.cta_score,
+                    "words_per_minute": semantic.words_per_minute,
+                    "face_presence_ratio": visual.face_presence_ratio,
+                    "text_presence_ratio": visual.text_presence_ratio,
+                    "framing_changes": visual.framing_changes,
+                    "dominant_shot_type": visual.dominant_shot_type,
+                    "timeline": [item.to_dict() for item in timeline],
+                }
                 st.session_state.video_analysis = structural
                 st.session_state.semantic_analysis = semantic
                 st.session_state.visual_analysis = visual
                 st.session_state.multimodal_timeline = timeline
+                st.session_state.analysis_blueprint = blueprint
                 st.session_state.analysis_source_name = uploaded.name
                 status.update(label="Engenharia reversa concluída", state="complete", expanded=False)
         except (VideoAnalysisError, SemanticAnalysisError, VisualAnalysisError) as exc:
@@ -198,14 +216,18 @@ if analysis is not None and semantic is not None and visual is not None:
             project_id = uuid.uuid4().hex[:10]
             output_dir = PROJECTS_DIR / project_id
             export_package(package, output_dir)
+            (output_dir / "reference-analysis.json").write_text(json.dumps(combined, ensure_ascii=False, indent=2), encoding="utf-8")
             st.session_state.project_id = project_id
             st.session_state.package = package
             st.session_state.package_dir = str(output_dir)
             st.session_state.preferred_hook = package.hook
-            st.success("Versão RP criada e enviada ao Studio principal.")
+            st.session_state.reference_analysis_path = str(output_dir / "reference-analysis.json")
+            st.success("Versão RP criada. A análise de referência foi salva dentro do projeto.")
             st.markdown(f"**Hook sugerido:** {package.hook}")
             st.markdown(f"**Tese:** {package.thesis}")
-            st.download_button("Baixar pacote RP", json.dumps(package.to_dict(), ensure_ascii=False, indent=2), "video-package-rp.json", "application/json", use_container_width=True)
+            a1, a2 = st.columns(2)
+            a1.download_button("Baixar pacote RP", json.dumps(package.to_dict(), ensure_ascii=False, indent=2), "video-package-rp.json", "application/json", use_container_width=True)
+            a2.page_link("app.py", label="Continuar no Studio", icon="🎬", use_container_width=True)
         except Exception as exc:
             st.error(f"Não foi possível criar a versão RP: {exc}")
 
