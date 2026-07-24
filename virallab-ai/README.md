@@ -1,120 +1,128 @@
-# ViralLab AI
+# RP ViralLab Studio
 
-Sistema de engenharia reversa e geração assistida de conteúdo curto para especialistas em saúde.
-
-## Objetivo
-
-Transformar vídeos de referência, ideias e conhecimento técnico em roteiros, storyboards, pacotes de edição e vídeos reproduzíveis, mantendo originalidade, identidade e credibilidade.
+Sistema de engenharia reversa, geração assistida e produção de vídeos curtos para especialistas em saúde.
 
 ## Estado atual
 
-**MVP Core v0.1 em desenvolvimento.**
+**MVP v0.5 — front-end RP, aprendizado auditável e renderização completa.**
 
-Já implementado:
+O ViralLab transforma um tema em:
 
 - brief estruturado;
-- Formato 01 — Professor Cinemático;
-- geração de hook, tese e cenas cronometradas;
-- storyboard;
-- instruções de avatar, B-roll, captura e edição;
-- exportação JSON, Markdown, SRT, legenda e lista de assets;
-- guardrails de privacidade e revisão científica;
-- interface por linha de comando.
+- hook e tese;
+- roteiro e storyboard;
+- manifesto de falas do avatar;
+- plano de produção;
+- vídeo vertical 1080 × 1920;
+- voz, trilha e legendas;
+- registro do feedback editorial no DNA RP.
 
-## Fluxo do produto
+## Interface RP
 
-```text
-Tema ou vídeo de referência
-        ↓
-Brief / Reverse Engineer
-        ↓
-Hook + tese + template
-        ↓
-Roteiro e storyboard
-        ↓
-Avatar + assets + capturas
-        ↓
-Renderização
-        ↓
-Publicação e métricas
-        ↓
-Learning Engine
-```
+A interface foi desenhada para uso diário, sem exigir domínio técnico. Ela possui cinco áreas:
 
-## Teste local do gerador
+1. **Estratégia** — tema, público, objetivo, duração, formato e nível de evidência.
+2. **Roteiro** — hook, tese, storyboard, cenas e download do pacote.
+3. **Produção** — upload guiado do avatar, capturas, provas e trilha.
+4. **Render** — prévia ou geração do MP4 final com FFmpeg.
+5. **DNA RP** — avaliação, aprovação, estilo preferido e memória editorial.
 
-Requer Python 3.11 ou superior.
+A identidade utiliza fundo azul-marinho escuro, acento ciano, detalhes dourados e o monograma RP. A marca gráfica oficial poderá substituir o monograma sem alterar o fluxo.
+
+## Executar a interface
+
+Requer Python 3.11 ou superior. Para renderizar, FFmpeg e FFprobe devem estar instalados.
 
 ```bash
 cd virallab-ai
-python -m pip install -e .
-virallab "inteligência artificial na fisioterapia" \
+python -m pip install -e ".[ui]"
+streamlit run app.py
+```
+
+Para instalar também os testes:
+
+```bash
+python -m pip install -e ".[all]"
+pytest -q
+```
+
+## Fluxo visual
+
+```text
+Estratégia
+    ↓
+Roteiro e storyboard
+    ↓
+Produção dos materiais
+    ↓
+Renderização
+    ↓
+Avaliação editorial
+    ↓
+DNA RP
+```
+
+## Aprendizado transparente
+
+Cada avaliação é salva localmente em:
+
+```text
+workspace/learning/feedback.jsonl
+```
+
+Os registros incluem tema, nota, aprovação, hook original, hook preferido, direção editorial, observações, projeto e data.
+
+Nesta fase, o sistema não modifica um modelo silenciosamente. A base será utilizada para:
+
+- enriquecer os prompts;
+- selecionar exemplos semelhantes;
+- ranquear hooks;
+- consolidar o DNA Rodrigo;
+- criar avaliações automáticas;
+- futuramente sustentar RAG ou fine-tuning.
+
+## Estrutura de um projeto
+
+```text
+workspace/
+├── projects/
+│   └── <project_id>/
+│       ├── assets/
+│       ├── generated/
+│       ├── video-package.json
+│       ├── script.md
+│       ├── captions.srt
+│       ├── avatar-manifest.json
+│       ├── render-plan.json
+│       └── video-final.mp4
+└── learning/
+    └── feedback.jsonl
+```
+
+## Modos de IA
+
+- `local`: gratuito, determinístico e sem internet;
+- `gemini`: geração contextual com `GEMINI_API_KEY`;
+- `auto`: usa Gemini quando configurado e retorna ao modo local quando não estiver.
+
+## CLI
+
+```bash
+virallab "IA na fisioterapia" \
+  --provider local \
   --duration 60 \
   --format professor_cinematico \
   --cta "Siga o Professor RP para aprender IA aplicada à saúde." \
-  --output output/teste-01
-```
-
-O comando gera:
-
-```text
-output/teste-01/
-├── video-package.json
-├── script.md
-├── captions.srt
-├── caption.txt
-└── asset-list.txt
-```
-
-## Pipeline planejado
-
-1. Entrada de vídeo, áudio, transcrição ou tema.
-2. Transcrição local com Whisper.
-3. Análise de hook, estrutura, ritmo, cortes, visuais e CTA.
-4. Geração contextual com Gemini API ou modelo local.
-5. Storyboard e plano de edição.
-6. Avatar opcional.
-7. Renderização com FFmpeg e Remotion.
-8. Exportação multiplataforma.
-9. Registro de métricas para aprendizado contínuo.
-
-## Stack gratuita prioritária
-
-- Gemini API / Google AI Studio;
-- Whisper ou whisper.cpp;
-- FFmpeg;
-- Remotion;
-- Ollama;
-- ComfyUI e modelos abertos;
-- Piper TTS;
-- Google Drive;
-- GitHub Actions.
-
-## Estrutura
-
-```text
-virallab-ai/
-├── README.md
-├── pyproject.toml
-├── docs/
-│   ├── architecture.md
-│   ├── free-tool-stack.md
-│   └── optimized-workflows.md
-├── prompts/
-├── schemas/
-└── src/virallab/
-    ├── __init__.py
-    ├── cli.py
-    ├── generator.py
-    ├── models.py
-    └── templates.py
+  --output output/teste-01 \
+  --render
 ```
 
 ## Princípios
 
-- Conteúdo original, inspirado em padrões, nunca cópia literal.
-- Evidência e clareza acima de sensacionalismo.
-- Processamento local quando reduzir custo ou proteger dados.
-- Revisão humana antes da publicação.
-- Proibição de dados clínicos identificáveis em serviços públicos de IA.
+- conteúdo original, inspirado em padrões, nunca cópia literal;
+- evidência e clareza acima de sensacionalismo;
+- revisão humana antes da publicação;
+- processamento local quando reduzir custo ou proteger dados;
+- proibição de dados clínicos identificáveis em serviços públicos de IA;
+- aprendizado auditável e reversível;
 - `video-package.json` como fonte única de verdade do processo.

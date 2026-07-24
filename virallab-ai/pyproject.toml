@@ -4,10 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "virallab-ai"
-version = "0.1.0"
-description = "Gerador estruturado de vídeos curtos para especialistas em saúde"
+version = "0.5.0"
+description = "RP ViralLab Studio para criação, aprendizado e renderização de vídeos curtos"
 requires-python = ">=3.11"
 dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+ui = ["streamlit>=1.36"]
+all = ["pytest>=8", "streamlit>=1.36"]
 
 [project.scripts]
 virallab = "virallab.cli:main"
@@ -17,3 +22,6 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
