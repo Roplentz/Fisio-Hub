@@ -5,6 +5,7 @@ import argparse
 from .generator import export_package, generate_video_package
 from .models import VideoBrief
 from .providers import select_provider
+from .renderer import RenderError, render_video
 
 
 def main() -> None:
@@ -18,6 +19,17 @@ def main() -> None:
     parser.add_argument("--evidence-level", default="educacional")
     parser.add_argument("--provider", choices=["auto", "local", "gemini"], default="auto")
     parser.add_argument("--output", default="output")
+    parser.add_argument(
+        "--render",
+        action="store_true",
+        help="Renderiza video-final.mp4 com FFmpeg depois de gerar o pacote.",
+    )
+    parser.add_argument(
+        "--render-dry-run",
+        action="store_true",
+        help="Gera os comandos FFmpeg sem executar a renderização.",
+    )
+    parser.add_argument("--ffmpeg-bin", default="ffmpeg")
     args = parser.parse_args()
 
     brief = VideoBrief(
@@ -34,7 +46,22 @@ def main() -> None:
     path = export_package(package, args.output)
     print(f"Pacote criado em: {path}")
     print(f"Provedor de roteiro: {package.metadata['script_provider']}")
-    print("Próximos arquivos: avatar-manifest.json e render-plan.json")
+
+    if args.render or args.render_dry_run:
+        try:
+            video_path = render_video(
+                args.output,
+                ffmpeg_bin=args.ffmpeg_bin,
+                dry_run=args.render_dry_run,
+            )
+        except RenderError as exc:
+            parser.error(str(exc))
+        if args.render_dry_run:
+            print(f"Comandos FFmpeg criados em: {args.output}/generated/ffmpeg-commands.json")
+        else:
+            print(f"Vídeo renderizado em: {video_path}")
+    else:
+        print("Use --render para gerar o primeiro vídeo vertical com FFmpeg.")
 
 
 if __name__ == "__main__":
