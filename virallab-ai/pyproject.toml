@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "virallab-ai"
-version = "0.8.1"
-description = "RP ViralLab Studio com engenharia reversa multimodal, importação por URL e experiência simplificada"
+version = "0.9.0"
+description = "RP ViralLab Studio com inteligência editorial, engenharia reversa multimodal e produção de conteúdo"
 requires-python = ">=3.11"
 dependencies = []
 
