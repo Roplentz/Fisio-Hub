@@ -12,6 +12,7 @@ APP_ROOT = Path(__file__).resolve().parent.parent
 if str(APP_ROOT) not in sys.path:
     sys.path.insert(0, str(APP_ROOT))
 
+from virallab.editorial_analyzer import analyze_editorially
 from virallab.generator import export_package, generate_video_package
 from virallab.models import VideoBrief
 from virallab.providers import select_provider
@@ -30,7 +31,7 @@ st.set_page_config(page_title="Analisar vídeo · RP ViralLab", page_icon="◉",
 st.markdown(
     """
     <style>
-    :root { --bg:#061018; --line:rgba(255,255,255,.10); --cyan:#45d6dc; --muted:#91a6b4; --green:#78dfa5; }
+    :root { --bg:#061018; --line:rgba(255,255,255,.10); --cyan:#45d6dc; --muted:#91a6b4; }
     .stApp { background:radial-gradient(circle at 90% 0%,rgba(69,214,220,.14),transparent 30%),var(--bg); }
     .block-container { max-width:1080px; padding-top:1.1rem; padding-bottom:4rem; }
     .head { border:1px solid var(--line); background:linear-gradient(135deg,#142d3b,#091a24); padding:30px; border-radius:27px; margin-bottom:18px; }
@@ -41,6 +42,7 @@ st.markdown(
     .score { padding:24px; border:1px solid var(--line); border-radius:22px; text-align:center; background:linear-gradient(180deg,#132a38,#0b1c27); }
     .score strong { display:block; color:white; font-size:48px; line-height:1; }
     .score span { color:var(--muted); font-size:13px; }
+    .formula { padding:16px; border:1px solid var(--line); border-radius:16px; background:#0b1c27; margin-bottom:9px; }
     [data-testid="stMetric"] { background:linear-gradient(180deg,#132a38,#0b1c27); border:1px solid var(--line); border-radius:17px; padding:14px; }
     [data-testid="stFileUploaderDropzone"] { background:#091923; border:1px dashed rgba(69,214,220,.45); border-radius:18px; }
     .stButton>button,.stDownloadButton>button { min-height:50px; border-radius:14px; font-weight:850; }
@@ -51,7 +53,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 st.markdown(
-    '<section class="head"><div class="kicker">Engenharia reversa de conteúdo</div><h1>Descubra por que este vídeo prende a atenção</h1><p>O ViralLab analisa estrutura, fala, hook, ritmo, visual e chamada para ação — e transforma tudo em uma arquitetura que você pode usar para criar uma versão original.</p></section>',
+    '<section class="head"><div class="kicker">Inteligência editorial e estratégica</div><h1>Entenda por que o conteúdo funciona — e onde ele perde força</h1><p>O ViralLab interpreta tese, promessa, atenção, retenção, persuasão, visual e CTA. Depois transforma a lógica em uma fórmula original para o seu conteúdo.</p></section>',
     unsafe_allow_html=True,
 )
 
@@ -69,7 +71,7 @@ else:
     replace = True
 
 if replace:
-    uploaded = st.file_uploader("Envie o vídeo", type=["mp4", "mov", "m4v", "webm", "mkv"], help="Para o primeiro teste, prefira vídeos de até 2 minutos.")
+    uploaded = st.file_uploader("Envie o vídeo", type=["mp4", "mov", "m4v", "webm", "mkv"])
     if uploaded is not None:
         key = f"{uploaded.name}:{uploaded.size}"
         if st.session_state.get("analysis_upload_key") != key:
@@ -80,45 +82,51 @@ if replace:
             st.session_state.pending_video_path = str(video_path)
             st.session_state.pending_video_name = uploaded.name
             st.session_state.pending_video_source = "upload"
-            for item in ("video_analysis", "semantic_analysis", "visual_analysis", "multimodal_timeline"):
+            for item in ("video_analysis", "semantic_analysis", "visual_analysis", "multimodal_timeline", "editorial_analysis"):
                 st.session_state.pop(item, None)
         else:
             video_path = Path(st.session_state.pending_video_path)
         st.video(uploaded.getvalue())
 
-threshold, model_size, max_moments = 0.30, "tiny", 8
+threshold, model_size, max_moments = 0.30, "base", 10
 with st.expander("⚙️ Configurações avançadas", expanded=False):
-    st.caption("Os padrões já estão otimizados para uma análise rápida. Altere apenas quando necessário.")
+    st.caption("A análise editorial profunda usa IA quando GEMINI_API_KEY está configurada. Sem a chave, entra um diagnóstico local mais limitado.")
     c1, c2, c3 = st.columns(3)
     threshold = c1.slider("Sensibilidade dos cortes", 0.15, 0.60, 0.30, 0.05)
-    model_size = c2.selectbox("Precisão da transcrição", ["tiny", "base", "small"], index=0, format_func=lambda value: {"tiny":"Rápida", "base":"Equilibrada", "small":"Mais precisa"}[value])
-    max_moments = c3.slider("Quantidade de frames", 6, 24, 8, 2)
+    model_size = c2.selectbox("Precisão da transcrição", ["tiny", "base", "small"], index=1, format_func=lambda value: {"tiny":"Rápida", "base":"Equilibrada", "small":"Mais precisa"}[value])
+    max_moments = c3.slider("Quantidade de frames", 6, 24, 10, 2)
 
-if video_path is not None and st.button("Analisar vídeo  →", type="primary", use_container_width=True):
+if video_path is not None and st.button("Analisar conteúdo profundamente  →", type="primary", use_container_width=True):
     missing = [binary for binary in ("ffmpeg", "ffprobe") if shutil.which(binary) is None]
     if missing:
-        st.error("O servidor ainda está concluindo a instalação do motor de vídeo. Aguarde o novo deploy e tente novamente em alguns minutos.")
-        st.caption(f"Componente indisponível: {', '.join(missing)}")
+        st.error("O servidor ainda está concluindo a instalação do motor de vídeo. Tente novamente em alguns minutos.")
     else:
         try:
-            with st.status("Analisando seu vídeo...", expanded=True) as status:
-                st.write("✓ Entendendo estrutura, duração e cortes")
+            with st.status("Interpretando o conteúdo...", expanded=True) as status:
+                st.write("✓ Mapeando estrutura, duração e cortes")
                 structural = analyze_video(video_path, scene_threshold=threshold)
-                st.write("✓ Interpretando fala, hook, narrativa e CTA")
+                st.write("✓ Transcrevendo e segmentando a narrativa")
                 semantic = transcribe_video(video_path, model_size=model_size, language="pt")
                 st.write("✓ Lendo frames, rostos, textos e enquadramentos")
                 frames_dir = ANALYSIS_DIR / f"{video_path.stem}-frames"
                 visual = analyze_visuals(video_path, output_dir=frames_dir, scene_threshold=threshold, max_moments=max_moments)
-                st.write("✓ Construindo o mapa temporal")
+                st.write("✓ Sincronizando fala e imagem")
                 timeline = build_multimodal_timeline(semantic, visual)
+                st.write("✓ Interpretando tese, atenção, retenção e persuasão")
+                editorial = analyze_editorially(structural, semantic, visual, timeline)
                 st.session_state.video_analysis = structural
                 st.session_state.semantic_analysis = semantic
                 st.session_state.visual_analysis = visual
                 st.session_state.multimodal_timeline = timeline
+                st.session_state.editorial_analysis = editorial
                 st.session_state.analysis_source_name = pending_name or video_path.name
-                status.update(label="Análise concluída", state="complete", expanded=False)
+                status.update(label="Análise editorial concluída", state="complete", expanded=False)
         except (VideoAnalysisError, SemanticAnalysisError, VisualAnalysisError) as exc:
             st.error("Não foi possível concluir esta análise.")
+            with st.expander("Ver detalhe técnico"):
+                st.code(str(exc))
+        except Exception as exc:
+            st.error("A leitura editorial não pôde ser concluída.")
             with st.expander("Ver detalhe técnico"):
                 st.code(str(exc))
 
@@ -126,40 +134,79 @@ analysis = st.session_state.get("video_analysis")
 semantic = st.session_state.get("semantic_analysis")
 visual = st.session_state.get("visual_analysis")
 timeline = st.session_state.get("multimodal_timeline")
+editorial = st.session_state.get("editorial_analysis")
 
-if analysis is not None and semantic is not None and visual is not None:
+if analysis is not None and semantic is not None and visual is not None and editorial is not None:
     st.divider()
-    overall = round((analysis.viral_potential_score + semantic.hook_score + semantic.cta_score + analysis.pacing_score + analysis.format_score) / 5)
-    label = "Excelente estrutura" if overall >= 85 else "Boa estrutura" if overall >= 70 else "Estrutura com oportunidades"
+    st.caption(f"Motor editorial: {editorial.engine}")
     left, right = st.columns([0.34, 0.66], gap="large")
     with left:
-        st.markdown(f'<div class="score"><strong>{overall}/100</strong><span>{label}</span></div>', unsafe_allow_html=True)
+        label = "Conteúdo forte" if editorial.content_score >= 80 else "Bom potencial" if editorial.content_score >= 65 else "Precisa de revisão"
+        st.markdown(f'<div class="score"><strong>{editorial.content_score}/100</strong><span>{label}</span></div>', unsafe_allow_html=True)
     with right:
-        st.subheader("Seu diagnóstico")
-        st.write(analysis.summary)
-        q1, q2, q3 = st.columns(3)
-        q1.metric("Hook", f"{semantic.hook_score}/100")
-        q2.metric("Ritmo", f"{analysis.pacing_score}/100")
-        q3.metric("CTA", f"{semantic.cta_score}/100")
+        st.subheader("Leitura executiva")
+        st.write(editorial.executive_summary)
+        st.error(f"**Prioridade:** {editorial.priority_action}")
 
-    st.markdown("### O que mais importa")
+    q1, q2, q3, q4 = st.columns(4)
+    q1.metric("Conteúdo", f"{editorial.content_score}/100")
+    q2.metric("Retenção", f"{editorial.retention_score}/100")
+    q3.metric("Persuasão", f"{editorial.persuasion_score}/100")
+    q4.metric("Clareza", f"{editorial.clarity_score}/100")
+
+    st.markdown("## A ideia por trás do vídeo")
     a, b = st.columns(2)
     with a:
-        for item in (analysis.strengths + semantic.strengths + visual.strengths)[:4]:
-            st.success(item)
+        st.markdown("### Tese central")
+        st.info(editorial.thesis)
+        st.markdown("### Promessa")
+        st.success(editorial.promise)
     with b:
-        for item in (analysis.improvements + semantic.improvements + visual.improvements)[:4]:
-            st.warning(item)
+        st.markdown("### Público inferido")
+        st.write(editorial.target_audience)
+        st.markdown("### Mecanismo de atenção")
+        st.write(editorial.attention_mechanism)
 
-    with st.expander("Ver relatório completo", expanded=False):
+    st.markdown("## Diagnóstico editorial")
+    tabs = st.tabs(["Hook", "Retenção", "Persuasão", "Visual", "CTA"])
+    with tabs[0]:
+        st.markdown(f"**Tipo:** {editorial.hook_type}")
+        st.write(editorial.hook_diagnosis)
+        st.caption(f"Trecho identificado: {semantic.hook_text}")
+    with tabs[1]:
+        st.write(editorial.retention_diagnosis)
+        for risk in editorial.retention_risks:
+            st.warning(f"**{risk.get('moment', 'Trecho')} — {risk.get('risk', '')}**\n\n{risk.get('why', '')}")
+    with tabs[2]:
+        st.write(editorial.persuasion_diagnosis)
+        if editorial.emotional_drivers:
+            st.markdown("**Motores emocionais:** " + " · ".join(editorial.emotional_drivers))
+    with tabs[3]:
+        st.write(editorial.visual_diagnosis)
+    with tabs[4]:
+        st.write(editorial.cta_diagnosis)
+
+    st.markdown("## Estrutura narrativa real")
+    for block in editorial.narrative_structure:
+        with st.expander(f"{block.get('time', 'Trecho')} · {block.get('function', 'Função narrativa')}"):
+            st.markdown(f"**Conteúdo:** {block.get('content', '')}")
+            st.markdown(f"**Visual:** {block.get('visual', '')}")
+
+    st.markdown("## Recomendações específicas")
+    for rec in editorial.specific_recommendations:
+        st.info(f"**{rec.get('moment', 'Momento')} — {rec.get('action', '')}**\n\n{rec.get('reason', '')}")
+
+    st.markdown("## Fórmula reproduzível")
+    st.caption("Use a lógica, não as frases ou o conteúdo da referência.")
+    for index, step in enumerate(editorial.reusable_formula, start=1):
+        st.markdown(f'<div class="formula"><strong>{index:02d}</strong> · {step}</div>', unsafe_allow_html=True)
+
+    with st.expander("Ver evidências técnicas", expanded=False):
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("Cenas", analysis.estimated_scenes)
         m2.metric("Média por cena", f"{analysis.average_scene_seconds}s")
         m3.metric("Presença facial", f"{visual.face_presence_ratio:.0%}")
         m4.metric("Mudanças de plano", visual.framing_changes)
-        st.info(f"Hook identificado: {semantic.hook_text}")
-        if semantic.cta_text:
-            st.success(f"CTA identificado: {semantic.cta_text}")
         st.markdown("#### Frames-chave")
         for start in range(0, len(visual.moments), 3):
             columns = st.columns(3)
@@ -172,14 +219,22 @@ if analysis is not None and semantic is not None and visual is not None:
                 st.write(item.speech or "Sem fala reconhecida")
                 st.info(item.recommendation)
 
-    combined = {"source": st.session_state.get("analysis_source_name"), "source_url": pending_source if pending_source not in {"upload", None} else None, "score": overall, "structural": analysis.to_dict(), "semantic": semantic.to_dict(), "visual": visual.to_dict(), "timeline": [item.to_dict() for item in timeline or []]}
+    combined = {
+        "source": st.session_state.get("analysis_source_name"),
+        "source_url": pending_source if pending_source not in {"upload", None} else None,
+        "editorial": editorial.to_dict(),
+        "structural": analysis.to_dict(),
+        "semantic": semantic.to_dict(),
+        "visual": visual.to_dict(),
+        "timeline": [item.to_dict() for item in timeline or []],
+    }
     d1, d2 = st.columns(2)
-    d1.download_button("Baixar relatório", json.dumps(combined, ensure_ascii=False, indent=2), "analise-virallab.json", "application/json", use_container_width=True)
+    d1.download_button("Baixar relatório editorial", json.dumps(combined, ensure_ascii=False, indent=2), "analise-editorial-virallab.json", "application/json", use_container_width=True)
     d2.download_button("Baixar legendas", semantic.to_srt(), "legendas-virallab.srt", "application/x-subrip", use_container_width=True)
 
     st.divider()
     st.subheader("Crie sua versão original")
-    st.caption("Use a arquitetura que funcionou sem copiar o conteúdo da referência.")
+    st.caption("A fórmula identificada orientará a nova criação, sem copiar o conteúdo da referência.")
     theme = st.text_input("Qual será o tema?", value="IA aplicada à fisioterapia")
     audience = st.text_input("Para quem?", value="fisioterapeutas brasileiros")
     objective = st.selectbox("O que você quer alcançar?", ["educar", "gerar autoridade", "ganhar seguidores qualificados", "engajar", "vender"])
@@ -187,7 +242,7 @@ if analysis is not None and semantic is not None and visual is not None:
     if st.button("Criar minha versão  →", type="primary", use_container_width=True):
         try:
             brief = VideoBrief(theme=theme, objective=objective, audience=audience, duration_seconds=min(60, max(15, round(analysis.duration_seconds / 5) * 5)), format="professor_cinematico", cta=cta, evidence_level="educacional")
-            package = generate_video_package(brief, provider=select_provider("local"))
+            package = generate_video_package(brief, provider=select_provider("auto"))
             project_id = uuid.uuid4().hex[:10]
             output_dir = PROJECTS_DIR / project_id
             export_package(package, output_dir)
