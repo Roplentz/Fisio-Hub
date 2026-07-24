@@ -23,7 +23,7 @@ Já implementado:
 - exportação JSON, Markdown, SRT, legenda e lista de assets;
 - guardrails de privacidade e revisão científica;
 - interface por linha de comando;
-- testes de fumaça do gerador e do renderizador.
+- testes automatizados e vídeo curto de fumaça no GitHub Actions.
 
 ## Fluxo do produto
 
@@ -54,6 +54,13 @@ Requer Python 3.11 ou superior. Para gerar o MP4, o FFmpeg também precisa estar
 ```bash
 cd virallab-ai
 python -m pip install -e .
+```
+
+Para desenvolvimento e testes:
+
+```bash
+python -m pip install -e ".[test]"
+pytest -q
 ```
 
 ## Gerar apenas o pacote
