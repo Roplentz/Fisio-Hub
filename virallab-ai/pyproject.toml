@@ -4,13 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "virallab-ai"
-version = "0.2.0"
-description = "Gerador estruturado e renderizador de vídeos curtos para especialistas em saúde"
+version = "0.4.0"
+description = "Gerador, treinador e renderizador de vídeos curtos para especialistas em saúde"
 requires-python = ">=3.11"
 dependencies = []
 
 [project.optional-dependencies]
 test = ["pytest>=8"]
+ui = ["streamlit>=1.36"]
+all = ["pytest>=8", "streamlit>=1.36"]
 
 [project.scripts]
 virallab = "virallab.cli:main"
