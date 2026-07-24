@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import json
-import os
 import re
-import urllib.error
-import urllib.request
 from dataclasses import asdict, dataclass
 from typing import Any
+
+from .gemini_client import GeminiAPIError, configured_model, generate_json, get_api_key
 
 
 class EditorialAnalysisError(RuntimeError):
@@ -44,10 +43,11 @@ class EditorialAnalysis:
 
 def analyze_editorially(structural: Any, semantic: Any, visual: Any, timeline: list[Any]) -> EditorialAnalysis:
     payload = _build_payload(structural, semantic, visual, timeline)
-    if os.getenv("GEMINI_API_KEY"):
+    if get_api_key():
         try:
             return _analyze_with_gemini(payload)
-        except Exception:
+        except EditorialAnalysisError:
+            # The app remains usable when the free API is unavailable or rate-limited.
             pass
     return _analyze_locally(payload)
 
@@ -84,27 +84,16 @@ def _build_payload(structural: Any, semantic: Any, visual: Any, timeline: list[A
 
 
 def _analyze_with_gemini(payload: dict[str, Any]) -> EditorialAnalysis:
-    model = os.getenv("VIRALLAB_GEMINI_MODEL", "gemini-2.5-flash")
-    key = os.getenv("GEMINI_API_KEY", "")
-    endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
-    request_payload = {
-        "contents": [{"parts": [{"text": _editorial_prompt(payload)}]}],
-        "generationConfig": {"responseMimeType": "application/json", "temperature": 0.25},
-    }
-    request = urllib.request.Request(
-        endpoint,
-        data=json.dumps(request_payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
     try:
-        with urllib.request.urlopen(request, timeout=90) as response:
-            result = json.loads(response.read().decode("utf-8"))
-        raw = result["candidates"][0]["content"]["parts"][0]["text"]
-        data = json.loads(raw)
-    except (urllib.error.URLError, TimeoutError, KeyError, IndexError, TypeError, json.JSONDecodeError) as exc:
+        data, used_model = generate_json(
+            _editorial_prompt(payload),
+            model=configured_model(),
+            temperature=0.25,
+            timeout=90,
+        )
+    except GeminiAPIError as exc:
         raise EditorialAnalysisError(f"Falha na inteligência editorial: {exc}") from exc
-    return _from_dict(data, engine=f"gemini:{model}")
+    return _from_dict(data, engine=f"gemini:{used_model}")
 
 
 def _from_dict(data: dict[str, Any], engine: str) -> EditorialAnalysis:
@@ -185,7 +174,7 @@ def _analyze_locally(payload: dict[str, Any]) -> EditorialAnalysis:
         emotional_drivers=["curiosidade", "redução de complexidade", "utilidade", "segurança"],
         narrative_structure=_local_structure(payload), retention_risks=risks, specific_recommendations=recs,
         reusable_formula=formula, priority_action=recs[0]["action"],
-        executive_summary=f"O vídeo tem uma ideia central reconhecível e um início potencialmente forte, mas precisa sincronizar melhor progressão verbal, provas e mudanças visuais. A prioridade é tornar a promessa mais específica e renovar a atenção em blocos previsíveis.",
+        executive_summary="O vídeo tem uma ideia central reconhecível e um início potencialmente forte, mas precisa sincronizar melhor progressão verbal, provas e mudanças visuais. A prioridade é tornar a promessa mais específica e renovar a atenção em blocos previsíveis.",
         content_score=content_score, retention_score=retention_score,
         persuasion_score=min(100, persuasion_score), clarity_score=clarity_score,
     )
