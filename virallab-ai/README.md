@@ -8,7 +8,7 @@ Transformar vídeos de referência, ideias e conhecimento técnico em roteiros, 
 
 ## Estado atual
 
-**MVP Core v0.2 — geração, avatar e primeiro renderizador FFmpeg.**
+**MVP Core v0.3 — geração, avatar, áudio, legendas e renderização FFmpeg.**
 
 Já implementado:
 
@@ -20,6 +20,10 @@ Já implementado:
 - manifesto de falas do avatar;
 - plano de renderização 1080 × 1920;
 - renderização FFmpeg com assets reais ou cartões temporários;
+- preservação da voz dos clipes de avatar;
+- silêncio técnico nos trechos sem áudio;
+- trilha opcional com volume controlado;
+- legendas SRT queimadas no vídeo final;
 - exportação JSON, Markdown, SRT, legenda e lista de assets;
 - guardrails de privacidade e revisão científica;
 - interface por linha de comando;
@@ -40,6 +44,8 @@ Roteiro e storyboard
         ↓
 Avatar + assets + capturas
         ↓
+Voz + trilha + legendas
+        ↓
 Renderização FFmpeg
         ↓
 Publicação e métricas
@@ -49,7 +55,7 @@ Learning Engine
 
 ## Instalação
 
-Requer Python 3.11 ou superior. Para gerar o MP4, o FFmpeg também precisa estar instalado e disponível no terminal.
+Requer Python 3.11 ou superior. Para gerar o MP4, FFmpeg e FFprobe precisam estar instalados e disponíveis no terminal.
 
 ```bash
 cd virallab-ai
@@ -74,7 +80,7 @@ virallab "inteligência artificial na fisioterapia" \
   --output output/teste-01
 ```
 
-## Gerar e renderizar o vídeo
+## Gerar e renderizar o vídeo completo
 
 ```bash
 virallab "inteligência artificial na fisioterapia" \
@@ -88,7 +94,40 @@ virallab "inteligência artificial na fisioterapia" \
 
 Quando algum asset ainda não existe, o renderizador cria um cartão temporário com o texto daquela cena. Isso permite validar duração, ritmo e sequência antes de produzir avatar e B-roll definitivos.
 
-Para inspecionar os comandos sem executar o FFmpeg:
+## Adicionar a trilha
+
+A forma mais simples é salvar a música em:
+
+```text
+output/teste-01/assets/music.mp3
+```
+
+O renderizador a encontra automaticamente e usa o volume padrão de -25 dB.
+
+Também é possível indicar outro arquivo:
+
+```bash
+virallab "IA na fisioterapia" \
+  --output output/teste-01 \
+  --music caminho/para/trilha.mp3 \
+  --music-level-db -27 \
+  --render
+```
+
+As vozes presentes nos vídeos `avatar-scene-XX.mp4` são preservadas. Cenas sem áudio recebem uma faixa silenciosa para evitar falhas na concatenação.
+
+## Legendas
+
+O arquivo `captions.srt` é incorporado ao vídeo por padrão. Para exportar sem legendas queimadas:
+
+```bash
+virallab "IA na fisioterapia" \
+  --output output/teste-01 \
+  --no-captions \
+  --render
+```
+
+## Inspecionar sem renderizar
 
 ```bash
 virallab "IA na fisioterapia" \
@@ -106,7 +145,8 @@ output/teste-01/
 │   ├── avatar-scene-02.mp4
 │   ├── avatar-scene-04.mp4
 │   ├── screen-scene-05.mp4
-│   └── proof-scene-06.jpg
+│   ├── proof-scene-06.jpg
+│   └── music.mp3
 ├── generated/
 ├── video-package.json
 ├── avatar-manifest.json
@@ -140,28 +180,26 @@ caption.txt
 asset-list.txt
 avatar-manifest.json
 render-plan.json
+generated/segments/
 generated/concat.txt
+generated/stitched.mp4
 generated/ffmpeg-commands.json
 video-final.mp4
 ```
 
-## Pipeline planejado
+## Próximas etapas
 
-1. Entrada de vídeo, áudio, transcrição ou tema.
-2. Transcrição local com Whisper.
-3. Análise de hook, estrutura, ritmo, cortes, visuais e CTA.
-4. Geração contextual com Gemini API ou modelo local.
-5. Storyboard e plano de edição.
-6. Avatar opcional.
-7. Renderização com FFmpeg e, posteriormente, Remotion.
-8. Exportação multiplataforma.
-9. Registro de métricas para aprendizado contínuo.
+1. Interface web para preencher o brief e revisar o roteiro.
+2. Importação assistida dos vídeos gerados no HeyGen.
+3. Biblioteca de trilhas e B-roll licenciados.
+4. Templates visuais de legenda e identidade FisioHub.
+5. Learning Engine baseado em métricas reais de publicação.
 
 ## Stack gratuita prioritária
 
 - Gemini API / Google AI Studio;
 - Whisper ou whisper.cpp;
-- FFmpeg;
+- FFmpeg e FFprobe;
 - Remotion;
 - Ollama;
 - ComfyUI e modelos abertos;
