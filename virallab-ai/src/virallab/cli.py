@@ -30,6 +30,22 @@ def main() -> None:
         help="Gera os comandos FFmpeg sem executar a renderização.",
     )
     parser.add_argument("--ffmpeg-bin", default="ffmpeg")
+    parser.add_argument("--ffprobe-bin", default="ffprobe")
+    parser.add_argument(
+        "--music",
+        help="Trilha opcional. Se omitida, procura assets/music.mp3 ou assets/music.wav.",
+    )
+    parser.add_argument(
+        "--music-level-db",
+        type=float,
+        default=-25.0,
+        help="Volume da trilha em dB. Padrão: -25.",
+    )
+    parser.add_argument(
+        "--no-captions",
+        action="store_true",
+        help="Não queima captions.srt no vídeo final.",
+    )
     args = parser.parse_args()
 
     brief = VideoBrief(
@@ -52,6 +68,10 @@ def main() -> None:
             video_path = render_video(
                 args.output,
                 ffmpeg_bin=args.ffmpeg_bin,
+                ffprobe_bin=args.ffprobe_bin,
+                music_file=args.music,
+                burn_captions=not args.no_captions,
+                music_level_db=args.music_level_db,
                 dry_run=args.render_dry_run,
             )
         except RenderError as exc:
@@ -61,7 +81,7 @@ def main() -> None:
         else:
             print(f"Vídeo renderizado em: {video_path}")
     else:
-        print("Use --render para gerar o primeiro vídeo vertical com FFmpeg.")
+        print("Use --render para gerar o vídeo vertical completo com FFmpeg.")
 
 
 if __name__ == "__main__":
