@@ -45,3 +45,4 @@ def test_renderer_uses_placeholder_for_missing_assets(tmp_path):
     first_scene = commands[0]
     assert "lavfi" in first_scene
     assert any("color=c=" in argument for argument in first_scene)
+    assert any("drawtext=" in argument for argument in first_scene)
