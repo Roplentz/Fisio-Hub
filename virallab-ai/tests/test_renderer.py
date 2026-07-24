@@ -27,12 +27,13 @@ def test_renderer_dry_run_creates_concat_and_command_manifest(tmp_path):
     assert command_file.exists()
 
     commands = json.loads(command_file.read_text(encoding="utf-8"))
-    assert len(commands) == len(package.scenes) + 1
+    assert len(commands) == len(package.scenes) + 2
     assert commands[-1][-1].endswith("video-final.mp4")
     assert "libx264" in commands[-1]
+    assert any("subtitles=" in argument for argument in commands[-1])
 
 
-def test_renderer_uses_placeholder_for_missing_assets(tmp_path):
+def test_renderer_uses_placeholder_and_silent_audio_for_missing_assets(tmp_path):
     brief = VideoBrief(theme="Inovação em saúde", duration_seconds=45)
     package = generate_video_package(brief, provider=LocalRuleProvider())
     export_package(package, tmp_path)
@@ -46,3 +47,18 @@ def test_renderer_uses_placeholder_for_missing_assets(tmp_path):
     assert "lavfi" in first_scene
     assert any("color=c=" in argument for argument in first_scene)
     assert any("drawtext=" in argument for argument in first_scene)
+    assert any("anullsrc=" in argument for argument in first_scene)
+    assert "aac" in first_scene
+
+
+def test_renderer_can_disable_burned_captions(tmp_path):
+    brief = VideoBrief(theme="IA responsável", duration_seconds=30)
+    package = generate_video_package(brief, provider=LocalRuleProvider())
+    export_package(package, tmp_path)
+
+    render_video(tmp_path, burn_captions=False, dry_run=True)
+    commands = json.loads(
+        (tmp_path / "generated" / "ffmpeg-commands.json").read_text(encoding="utf-8")
+    )
+
+    assert not any("subtitles=" in argument for argument in commands[-1])
