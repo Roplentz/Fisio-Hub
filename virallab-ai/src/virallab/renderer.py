@@ -20,9 +20,9 @@ def render_video(
 ) -> Path:
     """Renderiza um vídeo vertical a partir de ``render-plan.json``.
 
-    O primeiro renderizador prioriza robustez: usa o asset real quando disponível
-    e cria um cartão visual substituto quando ainda falta avatar, B-roll ou captura.
-    Assim, o fluxo sempre pode ser testado antes de todos os assets finais existirem.
+    Usa o asset real quando disponível e cria um cartão substituto quando ainda
+    falta avatar, B-roll ou captura. Isso permite validar o fluxo antes de todos
+    os materiais finais existirem.
     """
     root = Path(package_dir).resolve()
     plan_path = root / "render-plan.json"
@@ -161,7 +161,6 @@ def _cover_filter(width: int, height: int, fps: int) -> str:
 def _drawtext_filter(text: str, width: int, height: int) -> str:
     escaped = _ffmpeg_escape(text)
     font_size = max(44, int(width * 0.065))
-    max_width = int(width * 0.84)
     return (
         "drawtext="
         f"text='{escaped}':"
@@ -169,7 +168,7 @@ def _drawtext_filter(text: str, width: int, height: int) -> str:
         f"fontsize={font_size}:"
         "borderw=4:bordercolor=black@0.75:"
         "box=1:boxcolor=black@0.38:boxborderw=24:"
-        f"x=(w-min(text_w\,{max_width}))/2:"
+        "x=(w-text_w)/2:"
         f"y={int(height * 0.72)}"
     )
 
