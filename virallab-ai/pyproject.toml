@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "virallab-ai"
-version = "0.6.0"
-description = "RP ViralLab Studio para criação, análise semântica, aprendizado e renderização de vídeos curtos"
+version = "0.7.0"
+description = "RP ViralLab Studio para engenharia reversa multimodal e produção de vídeos curtos"
 requires-python = ">=3.11"
 dependencies = []
 
@@ -13,7 +13,8 @@ dependencies = []
 test = ["pytest>=8"]
 ui = ["streamlit>=1.41,<2"]
 semantic = ["faster-whisper>=1.1,<2"]
-all = ["pytest>=8", "streamlit>=1.41,<2", "faster-whisper>=1.1,<2"]
+visual = ["opencv-python-headless>=4.10,<5", "numpy>=1.26,<3", "pytesseract>=0.3.13,<1"]
+all = ["pytest>=8", "streamlit>=1.41,<2", "faster-whisper>=1.1,<2", "opencv-python-headless>=4.10,<5", "numpy>=1.26,<3", "pytesseract>=0.3.13,<1"]
 
 [project.scripts]
 virallab = "virallab.cli:main"
