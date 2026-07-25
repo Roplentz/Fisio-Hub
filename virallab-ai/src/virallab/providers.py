@@ -50,6 +50,7 @@ class GeminiProvider:
             raise ValueError("GEMINI_API_KEY não configurada.")
 
     def generate(self, brief: VideoBrief) -> dict[str, Any]:
+        _attach_session_reference_dna(brief)
         try:
             data, used_model = generate_json(
                 _build_prompt(brief),
@@ -76,6 +77,34 @@ class GeminiProvider:
         if isinstance(data.get("creative_rationale"), str):
             result["creative_rationale"] = data["creative_rationale"].strip()
         return result
+
+
+def _attach_session_reference_dna(brief: VideoBrief) -> None:
+    """Use the latest Streamlit editorial analysis without coupling core models to UI code."""
+    if brief.reference_dna:
+        return
+    try:
+        import streamlit as st
+
+        editorial = st.session_state.get("editorial_analysis")
+        if editorial is not None and hasattr(editorial, "to_dict"):
+            data = editorial.to_dict()
+            brief.reference_dna = {
+                "thesis": data.get("thesis"),
+                "promise": data.get("promise"),
+                "target_audience": data.get("target_audience"),
+                "attention_mechanism": data.get("attention_mechanism"),
+                "hook_type": data.get("hook_type"),
+                "retention_risks": data.get("retention_risks", []),
+                "specific_recommendations": data.get("specific_recommendations", []),
+                "reusable_formula": data.get("reusable_formula", []),
+                "priority_action": data.get("priority_action"),
+                "emotional_drivers": data.get("emotional_drivers", []),
+                "narrative_structure": data.get("narrative_structure", []),
+            }
+    except Exception:
+        # Generation still works from a plain Python process or without an analysis.
+        return
 
 
 def select_provider(name: str = "auto") -> ScriptProvider:
