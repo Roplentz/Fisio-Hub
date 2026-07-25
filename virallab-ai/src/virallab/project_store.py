@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .drive_sync import autosync_project
 from .models import Scene, VideoBrief, VideoPackage
 
 PROJECT_PATTERN = re.compile(r"^(?:project-)?(\d{3,})$")
@@ -38,11 +39,7 @@ class SavedProject:
 
 
 class ProjectStore:
-    """Numbered project registry with ZIP backup/import.
-
-    The local filesystem is convenient during a Streamlit session. ZIP export is the
-    durable, provider-neutral backup for environments whose disk may be ephemeral.
-    """
+    """Numbered project registry with ZIP backup/import and optional Drive autosave."""
 
     def __init__(self, projects_dir: str | Path) -> None:
         self.root = Path(projects_dir)
@@ -91,7 +88,7 @@ class ProjectStore:
         now = datetime.now(timezone.utc).isoformat()
         display_name = name.strip() or theme.strip() or f"Projeto {clean_id}"
         metadata = {
-            "version": "1.0",
+            "version": "1.1",
             "project_id": clean_id,
             "name": display_name,
             "theme": theme,
@@ -114,7 +111,11 @@ class ProjectStore:
             approved_assets=approved_assets,
         )
         self._upsert_registry(saved)
+        autosync_project(directory)
         return saved
+
+    def sync(self, project_id: str):
+        return autosync_project(self.project_dir(project_id))
 
     def list_projects(self) -> list[SavedProject]:
         projects: dict[str, SavedProject] = {}
