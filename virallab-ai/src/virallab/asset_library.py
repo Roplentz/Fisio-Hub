@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from .drive_sync import autosync_project
+
 
 @dataclass
 class AssetRecord:
@@ -138,6 +140,7 @@ class AssetLibrary:
         self.save(records)
         if status == "approved":
             self._publish_approved(selected)
+            autosync_project(self.project_dir)
         return selected
 
     def resolve(self, record: AssetRecord) -> Path:
