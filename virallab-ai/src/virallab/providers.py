@@ -3,9 +3,11 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import asdict
+from pathlib import Path
 from typing import Any, Protocol
 
 from .gemini_client import GeminiAPIError, configured_model, generate_json, get_api_key
+from .learning import build_learning_profile, learning_prompt, load_feedback
 from .models import VideoBrief
 
 
@@ -17,13 +19,19 @@ class ScriptProvider(Protocol):
 
 
 class LocalRuleProvider:
-    """Deterministic fallback that works without network access or API keys."""
-
     name = "local_rules"
 
     def generate(self, brief: VideoBrief) -> dict[str, Any]:
+        _attach_learning_profile(brief)
         theme = brief.theme.strip().rstrip(".?!")
-        hook = f"A verdade sobre {theme} que quase ninguém explica."
+        profile = brief.reference_dna.get("learning_profile", {})
+        styles = profile.get("preferred_styles") or []
+        if "Mais direto" in styles:
+            hook = f"Você ainda perde tempo com {theme}? Existe uma forma mais inteligente de trabalhar."
+        elif "Mais científico" in styles:
+            hook = f"O que a evidência realmente permite afirmar sobre {theme}?"
+        else:
+            hook = f"A verdade sobre {theme} que quase ninguém explica."
         thesis = (
             f"{theme.capitalize()} só gera valor quando amplia o raciocínio humano, "
             "sem substituir responsabilidade, julgamento e revisão crítica."
@@ -38,13 +46,12 @@ class LocalRuleProvider:
             "hook": hook,
             "thesis": thesis,
             "caption": caption,
+            "learning_profile": profile,
             "provider_notice": "Versão local gerada porque o serviço de IA não estava disponível.",
         }
 
 
 class GeminiProvider:
-    """Gemini provider using the shared resilient REST client."""
-
     name = "gemini"
 
     def __init__(self, api_key: str | None = None, model: str | None = None) -> None:
@@ -56,12 +63,10 @@ class GeminiProvider:
 
     def generate(self, brief: VideoBrief) -> dict[str, Any]:
         _attach_session_reference_dna(brief)
+        _attach_learning_profile(brief)
         try:
             data, used_model = generate_json(
-                _build_prompt(brief),
-                model=self.model,
-                temperature=None,
-                timeout=90,
+                _build_prompt(brief), model=self.model, temperature=None, timeout=90
             )
         except GeminiAPIError as exc:
             raise RuntimeError(f"Falha ao consultar Gemini: {exc}") from exc
@@ -77,6 +82,7 @@ class GeminiProvider:
             "thesis": str(data["thesis"]).strip(),
             "caption": str(data["caption"]).strip(),
             "provider_model": used_model,
+            "learning_profile": brief.reference_dna.get("learning_profile", {}),
         }
         if isinstance(data.get("scenes"), list):
             result["scenes"] = data["scenes"]
@@ -86,8 +92,6 @@ class GeminiProvider:
 
 
 class AutoFallbackProvider:
-    """Prefer Gemini, but never block the creator when the service is unavailable."""
-
     name = "auto"
 
     def generate(self, brief: VideoBrief) -> dict[str, Any]:
@@ -105,22 +109,17 @@ class AutoFallbackProvider:
                 result["provider_error"] = str(exc)[:500]
                 self.name = "local_fallback"
                 return result
-
         self.name = "local_rules"
         return LocalRuleProvider().generate(brief)
 
 
 def _attach_session_reference_dna(brief: VideoBrief) -> None:
-    """Use the latest Streamlit editorial analysis without coupling core models to UI code."""
-    if brief.reference_dna:
-        return
     try:
         import streamlit as st
-
         editorial = st.session_state.get("editorial_analysis")
         if editorial is not None and hasattr(editorial, "to_dict"):
             data = editorial.to_dict()
-            brief.reference_dna = {
+            brief.reference_dna.update({
                 "thesis": data.get("thesis"),
                 "promise": data.get("promise"),
                 "target_audience": data.get("target_audience"),
@@ -132,9 +131,23 @@ def _attach_session_reference_dna(brief: VideoBrief) -> None:
                 "priority_action": data.get("priority_action"),
                 "emotional_drivers": data.get("emotional_drivers", []),
                 "narrative_structure": data.get("narrative_structure", []),
-            }
+            })
     except Exception:
         return
+
+
+def _attach_learning_profile(brief: VideoBrief) -> None:
+    explicit = os.getenv("VIRALLAB_LEARNING_STORE", "").strip()
+    candidates = [Path(explicit)] if explicit else [
+        Path("workspace/learning/feedback.jsonl"),
+        Path(__file__).resolve().parents[2] / "workspace" / "learning" / "feedback.jsonl",
+    ]
+    records: list[dict[str, Any]] = []
+    for path in candidates:
+        records = load_feedback(path)
+        if records:
+            break
+    brief.reference_dna["learning_profile"] = build_learning_profile(records, theme=brief.theme)
 
 
 def select_provider(name: str = "auto") -> ScriptProvider:
@@ -150,6 +163,7 @@ def select_provider(name: str = "auto") -> ScriptProvider:
 
 def _build_prompt(brief: VideoBrief) -> str:
     brief_json = json.dumps(asdict(brief), ensure_ascii=False, indent=2)
+    learned_rules = learning_prompt(brief.reference_dna.get("learning_profile", {}))
     style_rules = {
         "professor_rp": "voz de professor experiente, humana, direta, confiável e provocativa; autoridade sem arrogância",
         "viral": "mais tensão, curiosidade, frases curtas e alto potencial de retenção, sem sensacionalismo",
@@ -158,33 +172,35 @@ def _build_prompt(brief: VideoBrief) -> str:
     style = style_rules.get(brief.creative_style, style_rules["professor_rp"])
     return f"""
 Você é o diretor criativo e roteirista-chefe do RP ViralLab.
-Crie um vídeo TOTALMENTE ORIGINAL a partir do tema informado, usando apenas a ARQUITETURA do DNA editorial da referência.
-Não copie frases, exemplos, nomes, listas ou conteúdo específico do vídeo analisado.
-Não invente evidências, números, resultados clínicos ou fontes.
+Crie um vídeo totalmente original a partir do tema informado.
+Não copie texto de referências e não invente evidências, números ou fontes.
 
 ESTILO ESCOLHIDO:
 {style}
 
-REGRAS OBRIGATÓRIAS:
-- O hook deve ter no máximo 22 palavras e funcionar falado nos primeiros 3 segundos.
-- Evite linguagem genérica de IA, clichês e frases excessivamente longas.
-- A tese deve ser clara, defensável e natural na voz do Professor RP.
+AUTOAPRENDIZADO DNA RP:
+{learned_rules}
+Use as preferências como orientação editorial, preservando precisão, ética e originalidade.
+
+REGRAS:
+- Hook com no máximo 22 palavras para os primeiros 3 segundos.
+- Evite clichês, linguagem artificial e promessas absolutas.
+- Tese clara, defensável e natural na voz do Professor RP.
 - Cada cena deve cumprir uma função narrativa distinta.
-- Use o DNA da referência: fórmula, mecanismo de atenção, riscos de retenção e recomendações.
-- Corrija explicitamente as fragilidades encontradas na referência.
-- Inclua mudanças visuais motivadas pelo conteúdo, não apenas decorativas.
+- Corrija fragilidades identificadas na referência.
+- Mudanças visuais devem ter função narrativa.
 - Termine exatamente com o CTA informado.
-- Narração total compatível com a duração solicitada.
+- Narração compatível com a duração solicitada.
 
 BRIEF E DNA EDITORIAL:
 {brief_json}
 
-Retorne SOMENTE JSON válido nesta estrutura:
+Retorne somente JSON válido:
 {{
   "hook": "frase curta e forte",
   "thesis": "tese central em uma frase",
   "caption": "legenda original que termina exatamente com o CTA",
-  "creative_rationale": "explique em até 80 palavras como o DNA da referência foi transformado",
+  "creative_rationale": "até 80 palavras sobre as decisões criativas",
   "scenes": [
     {{
       "scene_type": "title_card|avatar|broll|screen_capture|proof",
