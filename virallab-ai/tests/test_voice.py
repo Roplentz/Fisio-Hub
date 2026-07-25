@@ -26,7 +26,9 @@ def test_align_scenes_uses_script_word_weight() -> None:
 
 
 def test_voice_plan_round_trip(tmp_path) -> None:
-    plan = VoicePlan(audio_file="assets/narration.wav", duration=12.5, mode="full", scenes=[])
+    plan = VoicePlan(
+        audio_file="assets/narration.wav", duration=12.5, mode="full", scenes=[]
+    )
     save_voice_plan(tmp_path, plan)
     loaded = load_voice_plan(tmp_path)
     assert loaded is not None

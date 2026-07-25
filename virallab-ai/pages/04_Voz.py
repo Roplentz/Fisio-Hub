@@ -4,6 +4,7 @@ from pathlib import Path
 
 import streamlit as st
 
+from virallab.renderer import RenderError
 from virallab.voice import (
     VoiceError,
     load_voice_plan,
@@ -12,7 +13,6 @@ from virallab.voice import (
     update_voice_plan_with_scenes,
 )
 from virallab.voice_renderer import render_video_with_voice
-from virallab.renderer import RenderError
 
 st.set_page_config(page_title="Voz · ViralLab", page_icon="🎙️", layout="wide")
 
@@ -30,7 +30,9 @@ if package is None or package_dir is None:
     st.stop()
 
 script_text = "\n\n".join(
-    f"Cena {scene.index}\n{scene.narration}" for scene in package.scenes if scene.narration
+    f"Cena {scene.index}\n{scene.narration}"
+    for scene in package.scenes
+    if scene.narration
 )
 
 with st.expander("📜 Teleprompter", expanded=True):
@@ -107,7 +109,9 @@ if plan and audio_path:
     st.markdown("### Alinhamento estimado por cena")
     for item in plan.scenes:
         with st.container(border=True):
-            st.markdown(f"**Cena {item.scene_index} · {item.start:.1f}–{item.end:.1f}s**")
+            st.markdown(
+                f"**Cena {item.scene_index} · {item.start:.1f}–{item.end:.1f}s**"
+            )
             st.write(item.text or "Sem narração definida.")
 
     st.divider()
@@ -115,7 +119,9 @@ if plan and audio_path:
     burn_captions = st.checkbox("Legendas incorporadas", value=True)
     music_level = st.slider("Trilha de fundo (dB)", -40, -12, -25)
     narration_gain = st.slider("Volume da voz (dB)", -6, 6, 0)
-    if st.button("🎬 Gerar vídeo com narração", type="primary", use_container_width=True):
+    if st.button(
+        "🎬 Gerar vídeo com narração", type="primary", use_container_width=True
+    ):
         try:
             with st.spinner("Renderizando vídeo e aplicando sua voz..."):
                 video = render_video_with_voice(
