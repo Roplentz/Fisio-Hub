@@ -9,6 +9,7 @@ from typing import Any, Protocol
 from .gemini_client import GeminiAPIError, configured_model, generate_json, get_api_key
 from .learning import build_learning_profile, learning_prompt, load_feedback
 from .models import VideoBrief
+from .ollama_client import OllamaError, chat_json, is_configured as ollama_is_configured
 
 
 class ScriptProvider(Protocol):
@@ -47,7 +48,7 @@ class LocalRuleProvider:
             "thesis": thesis,
             "caption": caption,
             "learning_profile": profile,
-            "provider_notice": "Versão local gerada porque o serviço de IA não estava disponível.",
+            "provider_notice": "Versão local determinística gerada para manter o fluxo disponível.",
         }
 
 
@@ -70,47 +71,90 @@ class GeminiProvider:
             )
         except GeminiAPIError as exc:
             raise RuntimeError(f"Falha ao consultar Gemini: {exc}") from exc
-
-        required = {"hook", "thesis", "caption"}
-        missing = required.difference(data)
-        if missing:
-            raise RuntimeError(f"Gemini não retornou campos obrigatórios: {sorted(missing)}")
-
+        result = _normalize_generated(data)
+        result["provider_model"] = used_model
+        result["learning_profile"] = brief.reference_dna.get("learning_profile", {})
         self.model = used_model
-        result: dict[str, Any] = {
-            "hook": str(data["hook"]).strip(),
-            "thesis": str(data["thesis"]).strip(),
-            "caption": str(data["caption"]).strip(),
-            "provider_model": used_model,
-            "learning_profile": brief.reference_dna.get("learning_profile", {}),
-        }
-        if isinstance(data.get("scenes"), list):
-            result["scenes"] = data["scenes"]
-        if isinstance(data.get("creative_rationale"), str):
-            result["creative_rationale"] = data["creative_rationale"].strip()
+        return result
+
+
+class OllamaProvider:
+    """Free local neural provider using Qwen3 through Ollama."""
+
+    name = "ollama"
+
+    def __init__(self, model: str | None = None) -> None:
+        if not ollama_is_configured():
+            raise ValueError("OLLAMA_BASE_URL não configurada.")
+        self.model = model or os.getenv("VIRALLAB_OLLAMA_MODEL", "qwen3:4b")
+
+    def generate(self, brief: VideoBrief) -> dict[str, Any]:
+        _attach_session_reference_dna(brief)
+        _attach_learning_profile(brief)
+        try:
+            data, used_model = chat_json(_build_prompt(brief), model=self.model, timeout=150)
+        except OllamaError as exc:
+            raise RuntimeError(f"Falha ao consultar Qwen local: {exc}") from exc
+        result = _normalize_generated(data)
+        result["provider_model"] = used_model
+        result["learning_profile"] = brief.reference_dna.get("learning_profile", {})
+        result["provider_notice"] = "Roteiro gerado localmente com Qwen3 via Ollama."
+        self.model = used_model
         return result
 
 
 class AutoFallbackProvider:
+    """Gemini first, then free local Qwen3, then deterministic rules."""
+
     name = "auto"
 
     def generate(self, brief: VideoBrief) -> dict[str, Any]:
+        errors: list[str] = []
         if get_api_key():
             try:
                 result = GeminiProvider().generate(brief)
                 self.name = f"gemini:{result.get('provider_model', configured_model())}"
                 return result
             except (RuntimeError, ValueError) as exc:
-                result = LocalRuleProvider().generate(brief)
-                result["provider_notice"] = (
-                    "O serviço de IA está temporariamente indisponível. "
-                    "O ViralLab gerou uma versão local para você continuar trabalhando."
-                )
-                result["provider_error"] = str(exc)[:500]
-                self.name = "local_fallback"
+                errors.append(str(exc))
+
+        if ollama_is_configured():
+            try:
+                result = OllamaProvider().generate(brief)
+                self.name = f"ollama:{result.get('provider_model', 'qwen3')}"
+                if errors:
+                    result["provider_notice"] = (
+                        "O Gemini não estava disponível; o ViralLab usou a rede neural local Qwen3."
+                    )
                 return result
-        self.name = "local_rules"
-        return LocalRuleProvider().generate(brief)
+            except (RuntimeError, ValueError) as exc:
+                errors.append(str(exc))
+
+        result = LocalRuleProvider().generate(brief)
+        result["provider_notice"] = (
+            "Os motores neurais não estavam disponíveis. "
+            "O ViralLab gerou uma versão local determinística para você continuar trabalhando."
+        )
+        result["provider_error"] = " | ".join(errors)[:800]
+        self.name = "local_fallback"
+        return result
+
+
+def _normalize_generated(data: dict[str, Any]) -> dict[str, Any]:
+    required = {"hook", "thesis", "caption"}
+    missing = required.difference(data)
+    if missing:
+        raise RuntimeError(f"O modelo não retornou campos obrigatórios: {sorted(missing)}")
+    result: dict[str, Any] = {
+        "hook": str(data["hook"]).strip(),
+        "thesis": str(data["thesis"]).strip(),
+        "caption": str(data["caption"]).strip(),
+    }
+    if isinstance(data.get("scenes"), list):
+        result["scenes"] = data["scenes"]
+    if isinstance(data.get("creative_rationale"), str):
+        result["creative_rationale"] = data["creative_rationale"].strip()
+    return result
 
 
 def _attach_session_reference_dna(brief: VideoBrief) -> None:
@@ -156,6 +200,8 @@ def select_provider(name: str = "auto") -> ScriptProvider:
         return LocalRuleProvider()
     if normalized == "gemini":
         return GeminiProvider()
+    if normalized in {"ollama", "qwen", "qwen3"}:
+        return OllamaProvider()
     if normalized == "auto":
         return AutoFallbackProvider()
     raise ValueError(f"Provedor desconhecido: {name}")
