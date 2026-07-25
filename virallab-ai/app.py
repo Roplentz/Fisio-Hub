@@ -222,7 +222,9 @@ def render_voice(package, package_path: Path) -> None:
         )
     if audio is not None:
         st.audio(audio.getvalue())
-        if st.button("Salvar e sincronizar voz", type="primary", use_container_width=True):
+        if st.button(
+            "Salvar e sincronizar voz", type="primary", use_container_width=True
+        ):
             try:
                 plan = save_narration(
                     package_path,
@@ -262,9 +264,7 @@ def render_voice(package, package_path: Path) -> None:
 
 def render_creatives(package, package_path: Path) -> None:
     library = AssetLibrary(package_path)
-    approved_count = sum(
-        1 for item in library.load() if item.status == "approved"
-    )
+    approved_count = sum(1 for item in library.load() if item.status == "approved")
     c1, c2 = st.columns(2)
     c1.metric("Cenas", len(package.scenes))
     c2.metric("Aprovadas", f"{approved_count}/{len(package.scenes)}")
@@ -280,9 +280,7 @@ def render_creatives(package, package_path: Path) -> None:
     )
     for scene in package.scenes:
         records = library.for_scene(scene.index)
-        approved = next(
-            (item for item in records if item.status == "approved"), None
-        )
+        approved = next((item for item in records if item.status == "approved"), None)
         prompt = build_scene_prompt(
             scene, theme=package.brief.theme, visual_style=visual_style
         )
@@ -303,9 +301,7 @@ def render_creatives(package, package_path: Path) -> None:
             ):
                 try:
                     with st.spinner("Criando..."):
-                        generate_scene_asset(
-                            package_path, scene, prompt=edited_prompt
-                        )
+                        generate_scene_asset(package_path, scene, prompt=edited_prompt)
                     st.rerun()
                 except (ImageGenerationError, ValueError) as exc:
                     st.error(str(exc))
@@ -428,9 +424,7 @@ if view == "Analisar vídeo":
     )
     upload_tab, url_tab = st.tabs(["📁 Upload", "🔗 URL"])
     with upload_tab:
-        uploaded = st.file_uploader(
-            "Vídeo", type=["mp4", "mov", "m4v", "webm", "mkv"]
-        )
+        uploaded = st.file_uploader("Vídeo", type=["mp4", "mov", "m4v", "webm", "mkv"])
         if uploaded is not None:
             st.video(uploaded.getvalue())
             if st.button("Analisar vídeo →", type="primary", use_container_width=True):
@@ -501,9 +495,7 @@ else:
 
     package = st.session_state.package
     package_path = (
-        Path(st.session_state.package_dir)
-        if st.session_state.package_dir
-        else None
+        Path(st.session_state.package_dir) if st.session_state.package_dir else None
     )
 
     if selected_step == "strategy":
@@ -511,9 +503,7 @@ else:
         left, right = st.columns(2, gap="large")
         with left:
             theme = st.text_input("Tema", value="IA na fisioterapia")
-            audience = st.text_input(
-                "Público", value="fisioterapeutas brasileiros"
-            )
+            audience = st.text_input("Público", value="fisioterapeutas brasileiros")
             objective = st.selectbox(
                 "Objetivo",
                 [
@@ -536,9 +526,7 @@ else:
                     "case_clinico",
                 ],
             )
-            evidence = st.selectbox(
-                "Base", ["educacional", "cientifico", "opiniao"]
-            )
+            evidence = st.selectbox("Base", ["educacional", "cientifico", "opiniao"])
             provider_name = st.selectbox(
                 "Motor de IA", ["auto", "gemini", "ollama", "local"]
             )
