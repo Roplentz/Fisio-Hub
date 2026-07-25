@@ -2,12 +2,16 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 from .avatar import avatar_manifest
-from .models import VideoBrief, VideoPackage
+from .models import Scene, VideoBrief, VideoPackage
 from .providers import ScriptProvider, select_provider
 from .render_plan import build_render_plan
 from .templates import TEMPLATES
+
+
+_ALLOWED_SCENE_TYPES = {"avatar", "title_card", "broll", "screen_capture", "proof"}
 
 
 def generate_video_package(
@@ -16,30 +20,87 @@ def generate_video_package(
 ) -> VideoPackage:
     selected_provider = provider or select_provider("auto")
     generated = selected_provider.generate(brief)
-    hook = generated["hook"]
-    thesis = generated["thesis"]
+    hook = str(generated["hook"]).strip()
+    thesis = str(generated["thesis"]).strip()
 
-    template = TEMPLATES.get(brief.format)
-    if template is None:
-        raise ValueError(f"Formato ainda não implementado: {brief.format}")
+    scenes = _scenes_from_ai(generated.get("scenes"), brief)
+    if not scenes:
+        template = TEMPLATES.get(brief.format)
+        if template is None:
+            raise ValueError(f"Formato ainda não implementado: {brief.format}")
+        scenes = template(brief, hook, thesis)
 
-    scenes = template(brief, hook, thesis)
     warnings = _quality_guardrails(brief)
     return VideoPackage(
         brief=brief,
         hook=hook,
         thesis=thesis,
         scenes=scenes,
-        caption=generated["caption"],
+        caption=str(generated["caption"]).strip(),
         hashtags=_build_hashtags(brief),
         warnings=warnings,
         metadata={
-            "format_version": "0.2.0",
-            "workflow": "brief>ai>script>storyboard>avatar>render-plan>quality>export",
+            "format_version": "0.3.0",
+            "workflow": "analysis-dna>ai-script>storyboard>human-review>production>render",
             "script_provider": selected_provider.name,
             "human_review_required": True,
+            "creative_style": brief.creative_style,
+            "reference_dna_used": bool(brief.reference_dna),
+            "creative_rationale": str(generated.get("creative_rationale", "")).strip(),
         },
     )
+
+
+def _scenes_from_ai(raw_scenes: Any, brief: VideoBrief) -> list[Scene]:
+    if not isinstance(raw_scenes, list) or not raw_scenes:
+        return []
+
+    cleaned: list[dict[str, Any]] = []
+    for item in raw_scenes[:12]:
+        if not isinstance(item, dict):
+            continue
+        scene_type = str(item.get("scene_type", "avatar")).strip().lower()
+        if scene_type not in _ALLOWED_SCENE_TYPES:
+            scene_type = "avatar"
+        try:
+            duration = max(1.5, float(item.get("duration_seconds", 5)))
+        except (TypeError, ValueError):
+            duration = 5.0
+        cleaned.append({**item, "scene_type": scene_type, "duration_seconds": duration})
+
+    if not cleaned:
+        return []
+
+    requested = max(15.0, float(brief.duration_seconds))
+    total = sum(float(item["duration_seconds"]) for item in cleaned)
+    scale = requested / total if total > 0 else 1.0
+    cursor = 0.0
+    scenes: list[Scene] = []
+
+    for index, item in enumerate(cleaned, start=1):
+        duration = float(item["duration_seconds"]) * scale
+        start = round(cursor, 2)
+        end = round(requested if index == len(cleaned) else cursor + duration, 2)
+        narration = str(item.get("narration", "")).strip()
+        on_screen = str(item.get("on_screen_text", "")).strip()
+        visual = str(item.get("visual_direction", "")).strip()
+        edit = str(item.get("edit_direction", "")).strip()
+        query = str(item.get("asset_query", "")).strip()
+        scenes.append(
+            Scene(
+                index=index,
+                start=start,
+                end=end,
+                scene_type=item["scene_type"],
+                narration=narration,
+                on_screen_text=on_screen,
+                visual_direction=visual,
+                edit_direction=edit,
+                asset_query=query,
+            )
+        )
+        cursor = end
+    return scenes
 
 
 def export_package(package: VideoPackage, output_dir: str | Path) -> Path:
@@ -91,13 +152,20 @@ def _script_markdown(package: VideoPackage) -> str:
         f"**Formato:** {package.brief.format}",
         f"**Duração:** {package.brief.duration_seconds}s",
         f"**Provedor:** {package.metadata.get('script_provider', 'desconhecido')}",
+        f"**Estilo:** {package.metadata.get('creative_style', '—')}",
         f"**Hook:** {package.hook}",
+        f"**Tese:** {package.thesis}",
         "",
+    ]
+    rationale = package.metadata.get("creative_rationale")
+    if rationale:
+        rows.extend(["## Decisão criativa", "", str(rationale), ""])
+    rows.extend([
         "## Storyboard",
         "",
         "| Tempo | Tipo | Narração | Texto na tela | Direção visual | Edição |",
         "|---|---|---|---|---|---|",
-    ]
+    ])
     for scene in package.scenes:
         rows.append(
             f"| {scene.start:.1f}-{scene.end:.1f}s | {scene.scene_type} | "
