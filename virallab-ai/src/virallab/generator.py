@@ -31,6 +31,10 @@ def generate_video_package(
         scenes = template(brief, hook, thesis)
 
     warnings = _quality_guardrails(brief)
+    provider_notice = str(generated.get("provider_notice", "")).strip()
+    if provider_notice:
+        warnings.append(provider_notice)
+
     return VideoPackage(
         brief=brief,
         hook=hook,
@@ -40,9 +44,12 @@ def generate_video_package(
         hashtags=_build_hashtags(brief),
         warnings=warnings,
         metadata={
-            "format_version": "0.3.0",
+            "format_version": "0.3.1",
             "workflow": "analysis-dna>ai-script>storyboard>human-review>production>render",
             "script_provider": selected_provider.name,
+            "provider_model": str(generated.get("provider_model", "")).strip(),
+            "provider_notice": provider_notice,
+            "provider_error": str(generated.get("provider_error", "")).strip(),
             "human_review_required": True,
             "creative_style": brief.creative_style,
             "reference_dna_used": bool(brief.reference_dna),
@@ -71,32 +78,27 @@ def _scenes_from_ai(raw_scenes: Any, brief: VideoBrief) -> list[Scene]:
     if not cleaned:
         return []
 
-    requested = max(15.0, float(brief.duration_seconds))
-    total = sum(float(item["duration_seconds"]) for item in cleaned)
-    scale = requested / total if total > 0 else 1.0
+    requested = max(5.0, float(brief.duration_seconds))
+    raw_total = sum(float(item["duration_seconds"]) for item in cleaned)
+    scale = requested / raw_total if raw_total > 0 else 1.0
     cursor = 0.0
     scenes: list[Scene] = []
-
     for index, item in enumerate(cleaned, start=1):
-        duration = float(item["duration_seconds"]) * scale
-        start = round(cursor, 2)
-        end = round(requested if index == len(cleaned) else cursor + duration, 2)
-        narration = str(item.get("narration", "")).strip()
-        on_screen = str(item.get("on_screen_text", "")).strip()
-        visual = str(item.get("visual_direction", "")).strip()
-        edit = str(item.get("edit_direction", "")).strip()
-        query = str(item.get("asset_query", "")).strip()
+        duration = max(1.5, float(item["duration_seconds"]) * scale)
+        end = requested if index == len(cleaned) else min(requested, cursor + duration)
+        if end <= cursor:
+            continue
         scenes.append(
             Scene(
                 index=index,
-                start=start,
-                end=end,
-                scene_type=item["scene_type"],
-                narration=narration,
-                on_screen_text=on_screen,
-                visual_direction=visual,
-                edit_direction=edit,
-                asset_query=query,
+                start=round(cursor, 2),
+                end=round(end, 2),
+                scene_type=str(item["scene_type"]),
+                narration=str(item.get("narration", "")).strip(),
+                on_screen_text=str(item.get("on_screen_text", "")).strip(),
+                visual_direction=str(item.get("visual_direction", "")).strip(),
+                edit_direction=str(item.get("edit_direction", "")).strip(),
+                asset_query=str(item.get("asset_query", "")).strip(),
             )
         )
         cursor = end
@@ -106,13 +108,8 @@ def _scenes_from_ai(raw_scenes: Any, brief: VideoBrief) -> list[Scene]:
 def export_package(package: VideoPackage, output_dir: str | Path) -> Path:
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
-
     json_path = out / "video-package.json"
-    json_path.write_text(
-        json.dumps(package.to_dict(), ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-
+    json_path.write_text(json.dumps(package.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
     (out / "script.md").write_text(_script_markdown(package), encoding="utf-8")
     (out / "captions.srt").write_text(_to_srt(package), encoding="utf-8")
     (out / "caption.txt").write_text(package.caption, encoding="utf-8")
@@ -129,70 +126,70 @@ def export_package(package: VideoPackage, output_dir: str | Path) -> Path:
 
 
 def _build_hashtags(brief: VideoBrief) -> list[str]:
-    tags = ["#ViralLab", "#InteligenciaArtificial", "#Inovacao", "#FisioIA"]
-    if "fisi" in brief.audience.lower() or "fisi" in brief.theme.lower():
-        tags.append("#Fisioterapia")
-    return tags
+    base = ["#fisioterapia", "#saude", "#inovacao"]
+    if "ia" in brief.theme.lower() or "intelig" in brief.theme.lower():
+        base.insert(0, "#inteligenciaartificial")
+    return base
 
 
 def _quality_guardrails(brief: VideoBrief) -> list[str]:
-    warnings: list[str] = []
-    if brief.duration_seconds > 90:
-        warnings.append("Formato curto acima de 90 segundos pode reduzir a conclusão do vídeo.")
+    warnings = ["Revisão humana obrigatória antes da publicação."]
     if brief.evidence_level == "cientifico":
-        warnings.append("Revisar afirmações, fontes e limites antes da publicação.")
-    warnings.append("Não inserir dados identificáveis de pacientes em telas, áudio ou imagens.")
+        warnings.append("Validar referências e não inventar resultados ou citações.")
+    warnings.append("Não inserir dados clínicos identificáveis em serviços públicos de IA.")
     return warnings
 
 
 def _script_markdown(package: VideoPackage) -> str:
-    rows = [
+    lines = [
         f"# {package.brief.theme}",
         "",
         f"**Formato:** {package.brief.format}",
         f"**Duração:** {package.brief.duration_seconds}s",
         f"**Provedor:** {package.metadata.get('script_provider', 'desconhecido')}",
-        f"**Estilo:** {package.metadata.get('creative_style', '—')}",
         f"**Hook:** {package.hook}",
-        f"**Tese:** {package.thesis}",
         "",
-    ]
-    rationale = package.metadata.get("creative_rationale")
-    if rationale:
-        rows.extend(["## Decisão criativa", "", str(rationale), ""])
-    rows.extend([
         "## Storyboard",
         "",
-        "| Tempo | Tipo | Narração | Texto na tela | Direção visual | Edição |",
-        "|---|---|---|---|---|---|",
-    ])
+    ]
     for scene in package.scenes:
-        rows.append(
-            f"| {scene.start:.1f}-{scene.end:.1f}s | {scene.scene_type} | "
-            f"{scene.narration} | {scene.on_screen_text} | {scene.visual_direction} | {scene.edit_direction} |"
+        lines.extend(
+            [
+                f"### Cena {scene.index} — {scene.start:.1f}s a {scene.end:.1f}s",
+                f"- Tipo: {scene.scene_type}",
+                f"- Narração: {scene.narration}",
+                f"- Texto na tela: {scene.on_screen_text}",
+                f"- Direção visual: {scene.visual_direction}",
+                f"- Edição: {scene.edit_direction}",
+                "",
+            ]
         )
-    rows.extend(["", "## Legenda", "", package.caption, "", " ".join(package.hashtags)])
-    return "\n".join(rows)
+    return "\n".join(lines)
 
 
 def _to_srt(package: VideoPackage) -> str:
-    blocks: list[str] = []
+    blocks = []
     for scene in package.scenes:
         if not scene.narration.strip():
             continue
         blocks.append(
-            f"{len(blocks) + 1}\n{_srt_time(scene.start)} --> {_srt_time(scene.end)}\n"
-            f"{scene.narration.strip()}\n"
+            "\n".join(
+                [
+                    str(len(blocks) + 1),
+                    f"{_srt_time(scene.start)} --> {_srt_time(scene.end)}",
+                    scene.narration.strip(),
+                ]
+            )
         )
-    return "\n".join(blocks)
+    return "\n\n".join(blocks) + ("\n" if blocks else "")
 
 
 def _srt_time(seconds: float) -> str:
     milliseconds = int(round(seconds * 1000))
     hours, remainder = divmod(milliseconds, 3_600_000)
     minutes, remainder = divmod(remainder, 60_000)
-    secs, millis = divmod(remainder, 1000)
-    return f"{hours:02}:{minutes:02}:{secs:02},{millis:03}"
+    secs, ms = divmod(remainder, 1000)
+    return f"{hours:02d}:{minutes:02d}:{secs:02d},{ms:03d}"
 
 
 def _asset_list(package: VideoPackage) -> str:
