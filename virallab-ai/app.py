@@ -51,13 +51,33 @@ st.markdown(
     .section-title { color:white; font-size:22px; font-weight:900; letter-spacing:-.6px; margin:8px 0 3px; }
     .section-sub { color:var(--muted); font-size:13px; margin-bottom:17px; }
     .tip { border-left:3px solid var(--cyan); padding:11px 14px; border-radius:0 12px 12px 0; background:rgba(69,214,220,.065); color:#bdd0da; font-size:12px; }
+    .scene-card { padding:17px; margin-bottom:11px; border:1px solid var(--line); border-radius:17px; background:linear-gradient(180deg,rgba(19,42,56,.92),rgba(11,27,38,.92)); }
+    .scene-head { display:flex; justify-content:space-between; gap:10px; color:white; font-weight:850; }
+    .scene-time { color:var(--cyan); font-size:12px; white-space:nowrap; }
+    .scene-label { margin-top:10px; color:var(--muted); font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+    .scene-text { color:#d8e5ea; font-size:13px; margin-top:3px; }
     [data-testid="stMetric"] { background:linear-gradient(180deg,rgba(19,42,56,.92),rgba(11,27,38,.92)); border:1px solid var(--line); border-radius:17px; padding:15px; }
     [data-testid="stFileUploaderDropzone"] { background:#091923; border:1px dashed rgba(69,214,220,.48); border-radius:17px; }
     .stButton>button,.stDownloadButton>button { min-height:46px; border-radius:13px; font-weight:800; border:1px solid var(--line); }
     .stButton>button[kind="primary"] { background:linear-gradient(135deg,var(--cyan),#188da0); color:#031014; border:none; }
     .stTextInput input,.stTextArea textarea,.stSelectbox [data-baseweb="select"]>div { background:#091923!important; border-color:var(--line)!important; color:white!important; border-radius:12px!important; }
     .footer { text-align:center; color:#607784; font-size:11px; margin-top:35px; }
-    @media(max-width:720px){ .hero{padding:25px;border-radius:22px}.hero h1{font-size:34px}.hero:after{display:none}.block-container{padding-left:1rem;padding-right:1rem} }
+    @media(max-width:720px){
+      .hero{padding:21px;border-radius:20px;margin-bottom:14px}
+      .hero h1{font-size:29px;line-height:1.08;letter-spacing:-1.1px}
+      .hero p{font-size:14px;line-height:1.5}
+      .hero:after{display:none}
+      .block-container{padding:.7rem .85rem 3rem}
+      .action-card{min-height:auto;padding:18px}
+      .action-card h3{font-size:20px}
+      [data-testid="stMetric"]{padding:10px}
+      [data-testid="stMetricValue"]{font-size:22px}
+      [data-testid="column"]{min-width:100%!important}
+      .stTabs [data-baseweb="tab-list"]{gap:4px;overflow-x:auto}
+      .stTabs [data-baseweb="tab"]{padding:0 10px;white-space:nowrap}
+      .stButton>button,.stDownloadButton>button{min-height:50px}
+      .scene-card{padding:14px;border-radius:15px}
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -97,9 +117,20 @@ def save_uploaded_file(uploaded_file, destination: Path) -> Path:
     return destination
 
 
-def package_scene_rows(package) -> list[dict[str, object]]:
+def render_scene_cards(package) -> None:
     names = {"avatar":"Professor RP", "title_card":"Tela de impacto", "broll":"Imagem de apoio", "screen_capture":"Captura de tela", "proof":"Prova / exemplo"}
-    return [{"Cena":scene.index, "Tempo":f"{scene.start:.1f}–{scene.end:.1f}s", "Função":names.get(scene.scene_type, scene.scene_type), "Narração":scene.narration, "Texto na tela":scene.on_screen_text, "Direção visual":scene.visual_direction} for scene in package.scenes]
+    for scene in package.scenes:
+        st.markdown(
+            f"""
+            <div class="scene-card">
+              <div class="scene-head"><span>Cena {scene.index} · {names.get(scene.scene_type, scene.scene_type)}</span><span class="scene-time">{scene.start:.1f}–{scene.end:.1f}s</span></div>
+              <div class="scene-label">Narração</div><div class="scene-text">{scene.narration or '—'}</div>
+              <div class="scene-label">Texto na tela</div><div class="scene-text">{scene.on_screen_text or '—'}</div>
+              <div class="scene-label">Direção visual</div><div class="scene-text">{scene.visual_direction or '—'}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
 
 def open_analysis(path: Path, name: str, source: str) -> None:
@@ -118,6 +149,8 @@ summary = summarize_preferences(records)
 with st.sidebar:
     st.markdown('<div class="brand"><div class="mark">RP</div><div><div class="brand-title">ViralLab Studio</div><div class="brand-sub">Engenharia de conteúdo</div></div></div>', unsafe_allow_html=True)
     view = st.radio("Navegação", ["Início", "Studio", "DNA RP"], key="workspace_view", label_visibility="collapsed")
+    if st.button("🧠 Painel Neural", use_container_width=True):
+        st.switch_page("pages/04_Painel_Neural.py")
     st.divider()
     st.caption("PROJETO ATUAL")
     st.code(st.session_state.project_id)
@@ -142,7 +175,6 @@ if view == "Início":
         """,
         unsafe_allow_html=True,
     )
-
     left, right = st.columns([1.25, .75], gap="large")
     with left:
         st.markdown('<div class="section-title">Analisar vídeo</div><div class="section-sub">Envie um arquivo ou cole uma URL pública.</div>', unsafe_allow_html=True)
@@ -174,7 +206,6 @@ if view == "Início":
             st.session_state.workspace_view = "Studio"
             st.rerun()
         st.markdown('<div class="tip"><strong>Fluxo recomendado:</strong> analise uma referência, entenda a arquitetura e então gere um conteúdo autoral.</div>', unsafe_allow_html=True)
-
     st.divider()
     st.markdown('<div class="section-title">O que o ViralLab entrega</div>', unsafe_allow_html=True)
     a, b, c, d = st.columns(4)
@@ -186,7 +217,6 @@ if view == "Início":
 elif view == "Studio":
     st.markdown('<section class="hero"><div class="kicker">Criação orientada por estratégia</div><h1>Studio de conteúdo</h1><p>Crie, revise, produza e renderize vídeos verticais mantendo revisão humana em todas as etapas.</p></section>', unsafe_allow_html=True)
     brief_tab, script_tab, assets_tab, render_tab = st.tabs(["01 Estratégia", "02 Roteiro", "03 Produção", "04 Render"])
-
     with brief_tab:
         st.markdown('<div class="section-title">Defina a intenção</div><div class="section-sub">O brief orienta o roteiro e o storyboard.</div>', unsafe_allow_html=True)
         left, right = st.columns(2, gap="large")
@@ -198,7 +228,7 @@ elif view == "Studio":
         with right:
             video_format = st.selectbox("Formato", ["professor_cinematico", "lista_demonstrativa", "narrativo", "tutorial", "case_clinico"])
             evidence_level = st.selectbox("Base", ["educacional", "cientifico", "opiniao"])
-            provider_name = st.selectbox("Motor de IA", ["auto", "local", "gemini"])
+            provider_name = st.selectbox("Motor de IA", ["auto", "gemini", "ollama", "local"], help="Auto tenta Gemini, depois Qwen/Ollama e por fim o modo local determinístico.")
             cta = st.text_area("Chamada para ação", value="Siga o Professor RP para aprender IA aplicada à saúde.", height=100)
         if st.button("Gerar roteiro e storyboard  →", type="primary", use_container_width=True):
             try:
@@ -214,7 +244,6 @@ elif view == "Studio":
                 st.success("Roteiro criado. Abra a aba 02 para revisar.")
             except Exception as exc:
                 st.error(f"Não foi possível gerar o pacote: {exc}")
-
     with script_tab:
         package = st.session_state.package
         if package is None:
@@ -224,14 +253,14 @@ elif view == "Studio":
             m1, m2, m3 = st.columns(3)
             m1.metric("Cenas", len(package.scenes))
             m2.metric("Duração", f"{package.brief.duration_seconds}s")
-            m3.metric("Motor", package.metadata.get("script_provider", "—"))
+            provider_label = package.metadata.get("script_provider", "—").replace("gemini:", "Gemini · ").replace("ollama:", "Qwen · ").replace("local_fallback", "Modo local")
+            m3.metric("Motor", provider_label)
             st.caption("HOOK")
             st.markdown(f"### {package.hook}")
             st.session_state.preferred_hook = st.text_area("Reescreva com sua voz", value=st.session_state.preferred_hook or package.hook, height=90)
             st.markdown(f"**Tese:** {package.thesis}")
-            st.dataframe(package_scene_rows(package), use_container_width=True, hide_index=True, height=390)
+            render_scene_cards(package)
             st.download_button("Baixar roteiro estruturado", json.dumps(package.to_dict(), ensure_ascii=False, indent=2), "video-package.json", "application/json", use_container_width=True)
-
     with assets_tab:
         package = st.session_state.package
         package_path = Path(st.session_state.package_dir) if st.session_state.package_dir else None
@@ -247,29 +276,26 @@ elif view == "Studio":
                     continue
                 label, suggested = mapping[scene.scene_type]
                 with st.container(border=True):
-                    a, b = st.columns([1.1, .9])
-                    a.markdown(f"**Cena {scene.index} · {label}**")
-                    a.caption(scene.narration or scene.on_screen_text)
-                    upload = b.file_uploader(f"Enviar {suggested}", type=["mp4", "mov", "webm", "png", "jpg", "jpeg", "webp"], key=f"asset-{scene.index}", label_visibility="collapsed")
+                    st.markdown(f"**Cena {scene.index} · {label}**")
+                    st.caption(scene.narration or scene.on_screen_text)
+                    upload = st.file_uploader(f"Enviar {suggested}", type=["mp4", "mov", "webm", "png", "jpg", "jpeg", "webp"], key=f"asset-{scene.index}")
                     if upload is not None:
                         saved = save_uploaded_file(upload, assets_dir / suggested)
-                        b.success(f"Salvo: {saved.name}")
+                        st.success(f"Salvo: {saved.name}")
             music = st.file_uploader("Trilha opcional", type=["mp3", "wav", "m4a", "aac"])
             if music is not None:
                 suffix = Path(music.name).suffix.lower() or ".mp3"
                 save_uploaded_file(music, assets_dir / f"music{suffix}")
                 st.success("Trilha salva.")
-
     with render_tab:
         package_path = Path(st.session_state.package_dir) if st.session_state.package_dir else None
         if package_path is None:
             st.warning("Crie um projeto antes de renderizar.")
         else:
             st.markdown('<div class="section-title">Finalização</div>', unsafe_allow_html=True)
-            c1, c2, c3 = st.columns(3)
-            burn_captions = c1.checkbox("Legendas incorporadas", value=True)
-            music_level = c2.slider("Trilha (dB)", -40, -12, -25)
-            dry_run = c3.checkbox("Simular sem MP4", value=False)
+            burn_captions = st.checkbox("Legendas incorporadas", value=True)
+            music_level = st.slider("Trilha (dB)", -40, -12, -25)
+            dry_run = st.checkbox("Simular sem MP4", value=False)
             if st.button("Renderizar vídeo vertical  →", type="primary", use_container_width=True):
                 try:
                     with st.spinner("Montando o vídeo..."):
@@ -306,7 +332,14 @@ else:
             st.rerun()
     if records:
         st.divider()
-        st.dataframe(records[-12:][::-1], use_container_width=True, hide_index=True)
-        st.download_button("Exportar DNA RP", "\n".join(json.dumps(item, ensure_ascii=False) for item in records), "dna-rp-feedback.jsonl", "application/x-ndjson")
+        for item in records[-12:][::-1]:
+            with st.container(border=True):
+                st.markdown(f"**{item.get('theme', 'Sem tema')}** · nota {item.get('rating', '—')}/10")
+                st.caption(f"{item.get('preferred_style', 'Sem direção')} · {'Aprovado' if item.get('approved') else 'Em revisão'}")
+                if item.get("preferred_hook"):
+                    st.write(item["preferred_hook"])
+                if item.get("notes"):
+                    st.caption(item["notes"])
+        st.download_button("Exportar DNA RP", "\n".join(json.dumps(item, ensure_ascii=False) for item in records), "dna-rp-feedback.jsonl", "application/x-ndjson", use_container_width=True)
 
 st.markdown('<div class="footer">RP ViralLab Studio · Conteúdo original, revisão humana e engenharia reversa ética.</div>', unsafe_allow_html=True)
