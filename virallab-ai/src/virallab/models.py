@@ -22,6 +22,8 @@ class VideoBrief:
     cta: str = "Siga o perfil para aprender mais."
     evidence_level: Literal["educacional", "cientifico", "opiniao"] = "educacional"
     avatar_name: str = "Professor RP"
+    creative_style: Literal["professor_rp", "viral", "conservadora"] = "professor_rp"
+    reference_dna: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
