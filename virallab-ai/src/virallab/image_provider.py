@@ -54,11 +54,24 @@ class GeminiImageProvider:
         *,
         aspect_ratio: str = "9:16",
         image_size: str = "1K",
+        reference_image: bytes | None = None,
+        reference_mime_type: str = "image/jpeg",
     ) -> GeneratedImage:
         endpoint = "https://generativelanguage.googleapis.com/v1beta/interactions"
+        inputs: list[dict[str, Any]] = [{"type": "text", "text": prompt}]
+        if reference_image:
+            inputs.append(
+                {
+                    "type": "image",
+                    "inline_data": {
+                        "mime_type": reference_mime_type,
+                        "data": base64.b64encode(reference_image).decode("ascii"),
+                    },
+                }
+            )
         payload = {
             "model": self.model,
-            "input": [{"type": "text", "text": prompt}],
+            "input": inputs,
             "response_format": {
                 "type": "image",
                 "aspect_ratio": aspect_ratio,
