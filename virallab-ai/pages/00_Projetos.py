@@ -29,6 +29,45 @@ st.markdown(
 st.title("💾 Projetos")
 st.caption("Salve, reabra e continue seus roteiros, criativos e renders sem misturar trabalhos.")
 
+current_package = st.session_state.get("package")
+current_raw_id = str(st.session_state.get("project_id", "")).strip()
+current_id = current_raw_id if current_raw_id.isdigit() else store.next_id()
+
+if current_package is not None:
+    with st.container(border=True):
+        st.subheader("Salvar trabalho atual")
+        st.caption(f"O roteiro aberto será salvo como Projeto {int(current_id):03d}, incluindo os criativos já gerados na pasta atual.")
+        current_name = st.text_input(
+            "Nome do projeto",
+            value=getattr(getattr(current_package, "brief", None), "theme", "") or f"Projeto {int(current_id):03d}",
+            key="save-current-project-name",
+        )
+        if st.button("💾 Salvar projeto atual", type="primary", use_container_width=True):
+            try:
+                clean_id = f"{int(current_id):03d}"
+                current_dir_raw = st.session_state.get("package_dir")
+                current_dir = Path(current_dir_raw) if current_dir_raw else None
+                destination = store.project_dir(clean_id)
+                if current_dir and current_dir.exists() and current_dir.resolve() != destination.resolve():
+                    if destination.exists():
+                        import shutil
+                        shutil.rmtree(destination)
+                    import shutil
+                    shutil.copytree(current_dir, destination)
+                saved = store.save(
+                    clean_id,
+                    name=current_name,
+                    package=current_package,
+                    preferred_hook=str(st.session_state.get("preferred_hook", "")),
+                    status="em produção",
+                )
+                st.session_state.project_id = saved.project_id
+                st.session_state.package_dir = str(store.project_dir(saved.project_id))
+                st.success(f"Projeto {saved.project_id} salvo. Você pode sair e reabri-lo pela biblioteca.")
+                st.rerun()
+            except Exception as exc:
+                st.error(f"Não foi possível salvar: {exc}")
+
 with st.container(border=True):
     st.subheader("Criar ou importar")
     left, right = st.columns(2)
@@ -55,7 +94,7 @@ with st.container(border=True):
             except Exception as exc:
                 st.error(f"Não foi possível importar: {exc}")
 
-st.info("No Streamlit Cloud, o disco pode ser reiniciado em atualizações ou períodos de inatividade. Use o botão **Baixar backup ZIP** para uma cópia permanente no celular.")
+st.info("No Streamlit Cloud, o disco pode ser reiniciado em atualizações ou períodos de inatividade. Use **Baixar backup ZIP** para manter uma cópia permanente no celular.")
 
 projects = store.list_projects()
 if not projects:
