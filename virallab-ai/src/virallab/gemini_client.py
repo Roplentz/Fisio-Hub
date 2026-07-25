@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 import urllib.error
 import urllib.request
 from typing import Any
@@ -11,8 +12,15 @@ class GeminiAPIError(RuntimeError):
     """Raised when the Gemini API cannot return a valid JSON response."""
 
 
-DEFAULT_MODEL = "gemini-2.5-flash"
-FALLBACK_MODELS = ("gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest")
+DEFAULT_MODEL = "gemini-3.6-flash"
+FALLBACK_MODELS = (
+    "gemini-3.6-flash",
+    "gemini-3.5-flash",
+    "gemini-3.1-flash-lite",
+    "gemini-3-flash-preview",
+    "gemini-flash-latest",
+)
+RETRYABLE_HTTP_CODES = {408, 429, 500, 502, 503, 504}
 
 
 def get_api_key() -> str:
@@ -33,8 +41,9 @@ def generate_json(
     prompt: str,
     *,
     model: str | None = None,
-    temperature: float = 0.3,
+    temperature: float | None = None,
     timeout: int = 90,
+    retries_per_model: int = 2,
 ) -> tuple[dict[str, Any], str]:
     api_key = get_api_key()
     if not api_key:
@@ -45,18 +54,25 @@ def generate_json(
     errors: list[str] = []
 
     for candidate in candidates:
-        try:
-            return _request_json(
-                prompt,
-                api_key=api_key,
-                model=candidate,
-                temperature=temperature,
-                timeout=timeout,
-            ), candidate
-        except GeminiAPIError as exc:
-            errors.append(f"{candidate}: {exc}")
-            # Only try another model when the endpoint/model is unavailable.
-            if "HTTP 404" not in str(exc):
+        for attempt in range(max(1, retries_per_model)):
+            try:
+                return _request_json(
+                    prompt,
+                    api_key=api_key,
+                    model=candidate,
+                    temperature=temperature,
+                    timeout=timeout,
+                ), candidate
+            except GeminiAPIError as exc:
+                message = str(exc)
+                errors.append(f"{candidate}: {message}")
+                code = _http_code(message)
+
+                if code == 404:
+                    break
+                if code in RETRYABLE_HTTP_CODES and attempt + 1 < max(1, retries_per_model):
+                    time.sleep(min(2 ** attempt, 4))
+                    continue
                 break
 
     raise GeminiAPIError(" | ".join(errors) or "Falha desconhecida ao consultar Gemini.")
@@ -67,19 +83,24 @@ def _request_json(
     *,
     api_key: str,
     model: str,
-    temperature: float,
+    temperature: float | None,
     timeout: int,
 ) -> dict[str, Any]:
     endpoint = (
         "https://generativelanguage.googleapis.com/v1beta/models/"
         f"{model}:generateContent"
     )
+    generation_config: dict[str, Any] = {
+        "responseMimeType": "application/json",
+    }
+    # Newer Gemini models deprecate sampling parameters. Keep support only
+    # when an explicit value is requested for an older configured model.
+    if temperature is not None and not model.startswith(("gemini-3.5", "gemini-3.6")):
+        generation_config["temperature"] = temperature
+
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {
-            "responseMimeType": "application/json",
-            "temperature": temperature,
-        },
+        "generationConfig": generation_config,
     }
     request = urllib.request.Request(
         endpoint,
@@ -117,6 +138,15 @@ def _request_json(
     if not isinstance(data, dict):
         raise GeminiAPIError("O Gemini não retornou um objeto JSON.")
     return data
+
+
+def _http_code(message: str) -> int | None:
+    if not message.startswith("HTTP "):
+        return None
+    try:
+        return int(message.split()[1].rstrip(":"))
+    except (IndexError, ValueError):
+        return None
 
 
 def _extract_error_message(body: str) -> str:
