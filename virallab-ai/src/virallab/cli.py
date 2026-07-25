@@ -17,7 +17,9 @@ def main() -> None:
     parser.add_argument("--format", default="professor_cinematico")
     parser.add_argument("--cta", default="Siga o perfil para aprender mais.")
     parser.add_argument("--evidence-level", default="educacional")
-    parser.add_argument("--provider", choices=["auto", "local", "gemini"], default="auto")
+    parser.add_argument(
+        "--provider", choices=["auto", "local", "gemini"], default="auto"
+    )
     parser.add_argument("--output", default="output")
     parser.add_argument(
         "--render",
@@ -77,7 +79,9 @@ def main() -> None:
         except RenderError as exc:
             parser.error(str(exc))
         if args.render_dry_run:
-            print(f"Comandos FFmpeg criados em: {args.output}/generated/ffmpeg-commands.json")
+            print(
+                f"Comandos FFmpeg criados em: {args.output}/generated/ffmpeg-commands.json"
+            )
         else:
             print(f"Vídeo renderizado em: {video_path}")
     else:

@@ -10,7 +10,6 @@ from .providers import ScriptProvider, select_provider
 from .render_plan import build_render_plan
 from .templates import TEMPLATES
 
-
 _ALLOWED_SCENE_TYPES = {"avatar", "title_card", "broll", "screen_capture", "proof"}
 
 
@@ -109,7 +108,9 @@ def export_package(package: VideoPackage, output_dir: str | Path) -> Path:
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
     json_path = out / "video-package.json"
-    json_path.write_text(json.dumps(package.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
+    json_path.write_text(
+        json.dumps(package.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     (out / "script.md").write_text(_script_markdown(package), encoding="utf-8")
     (out / "captions.srt").write_text(_to_srt(package), encoding="utf-8")
     (out / "caption.txt").write_text(package.caption, encoding="utf-8")
@@ -136,7 +137,9 @@ def _quality_guardrails(brief: VideoBrief) -> list[str]:
     warnings = ["Revisão humana obrigatória antes da publicação."]
     if brief.evidence_level == "cientifico":
         warnings.append("Validar referências e não inventar resultados ou citações.")
-    warnings.append("Não inserir dados clínicos identificáveis em serviços públicos de IA.")
+    warnings.append(
+        "Não inserir dados clínicos identificáveis em serviços públicos de IA."
+    )
     return warnings
 
 

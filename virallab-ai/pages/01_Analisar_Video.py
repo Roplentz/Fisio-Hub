@@ -70,10 +70,14 @@ st.markdown(
 pending_path = st.session_state.get("pending_video_path")
 pending_name = st.session_state.get("pending_video_name")
 pending_source = st.session_state.get("pending_video_source")
-video_path = Path(pending_path) if pending_path and Path(pending_path).exists() else None
+video_path = (
+    Path(pending_path) if pending_path and Path(pending_path).exists() else None
+)
 
 if video_path is not None:
-    source_label = "URL pública" if pending_source and pending_source != "upload" else "Upload"
+    source_label = (
+        "URL pública" if pending_source and pending_source != "upload" else "Upload"
+    )
     st.markdown(
         f'<div class="note"><strong>Vídeo pronto para análise:</strong> {pending_name or video_path.name} · origem: {source_label}</div>',
         unsafe_allow_html=True,
@@ -84,7 +88,9 @@ else:
     replace = True
 
 if replace:
-    uploaded = st.file_uploader("Envie o vídeo", type=["mp4", "mov", "m4v", "webm", "mkv"])
+    uploaded = st.file_uploader(
+        "Envie o vídeo", type=["mp4", "mov", "m4v", "webm", "mkv"]
+    )
     if uploaded is not None:
         key = f"{uploaded.name}:{uploaded.size}"
         if st.session_state.get("analysis_upload_key") != key:
@@ -116,14 +122,20 @@ with st.expander("⚙️ Configurações avançadas", expanded=False):
         "Precisão da transcrição",
         ["tiny", "base", "small"],
         index=1,
-        format_func=lambda value: {"tiny": "Rápida", "base": "Equilibrada", "small": "Mais precisa"}[value],
+        format_func=lambda value: {
+            "tiny": "Rápida",
+            "base": "Equilibrada",
+            "small": "Mais precisa",
+        }[value],
     )
     max_moments = c3.slider("Quantidade de frames", 6, 24, 10, 2)
 
 if video_path is not None and st.button(
     "Analisar conteúdo profundamente  →", type="primary", use_container_width=True
 ):
-    missing = [binary for binary in ("ffmpeg", "ffprobe") if shutil.which(binary) is None]
+    missing = [
+        binary for binary in ("ffmpeg", "ffprobe") if shutil.which(binary) is None
+    ]
     if missing:
         st.error("O servidor ainda está concluindo a instalação do motor de vídeo.")
         st.code("Ausente: " + ", ".join(missing))
@@ -139,13 +151,17 @@ if video_path is not None and st.button(
 
                 st.write("2/4 · Transcrevendo a fala...")
                 try:
-                    semantic = transcribe_video(video_path, model_size=model_size, language="pt")
+                    semantic = transcribe_video(
+                        video_path, model_size=model_size, language="pt"
+                    )
                     if semantic.warning:
                         warnings.append(semantic.warning)
                 except SemanticAnalysisError as exc:
                     warnings.append(str(exc))
                     semantic = unavailable_semantic_analysis(str(exc))
-                    st.warning("A fala não pôde ser transcrita. A análise continuará com estrutura e imagem.")
+                    st.warning(
+                        "A fala não pôde ser transcrita. A análise continuará com estrutura e imagem."
+                    )
 
                 st.write("3/4 · Lendo frames, enquadramentos e mudanças visuais...")
                 frames_dir = ANALYSIS_DIR / f"{video_path.stem}-frames"
@@ -159,7 +175,8 @@ if video_path is not None and st.button(
                 except VisualAnalysisError as exc:
                     warnings.append(str(exc))
                     raise VisualAnalysisError(
-                        "A etapa visual é necessária para esta versão da análise e não pôde ser concluída: " + str(exc)
+                        "A etapa visual é necessária para esta versão da análise e não pôde ser concluída: "
+                        + str(exc)
                     ) from exc
 
                 st.write("4/4 · Cruzando narrativa, estrutura e visual...")
@@ -172,7 +189,9 @@ if video_path is not None and st.button(
                 st.session_state.editorial_analysis = editorial
                 st.session_state.analysis_warnings = warnings
                 st.session_state.analysis_source_name = pending_name or video_path.name
-                label = "Análise concluída" if not warnings else "Análise parcial concluída"
+                label = (
+                    "Análise concluída" if not warnings else "Análise parcial concluída"
+                )
                 status.update(label=label, state="complete", expanded=False)
         except (VideoAnalysisError, VisualAnalysisError) as exc:
             st.error("Não foi possível concluir as etapas essenciais da análise.")
@@ -188,10 +207,17 @@ timeline = st.session_state.get("multimodal_timeline")
 editorial = st.session_state.get("editorial_analysis")
 warnings = st.session_state.get("analysis_warnings", [])
 
-if analysis is not None and semantic is not None and visual is not None and editorial is not None:
+if (
+    analysis is not None
+    and semantic is not None
+    and visual is not None
+    and editorial is not None
+):
     st.divider()
     if warnings:
-        st.warning("Análise concluída com limitações. O diagnóstico visual e estrutural foi preservado.")
+        st.warning(
+            "Análise concluída com limitações. O diagnóstico visual e estrutural foi preservado."
+        )
         with st.expander("Ver detalhes técnicos"):
             for warning in warnings:
                 st.code(warning)
@@ -245,7 +271,9 @@ if analysis is not None and semantic is not None and visual is not None and edit
 
     st.markdown("## Recomendações específicas")
     for rec in editorial.specific_recommendations:
-        st.info(f"**{rec.get('moment', 'Momento')} — {rec.get('action', '')}**\n\n{rec.get('reason', '')}")
+        st.info(
+            f"**{rec.get('moment', 'Momento')} — {rec.get('action', '')}**\n\n{rec.get('reason', '')}"
+        )
 
     st.markdown("## Fórmula reproduzível")
     for index, step in enumerate(editorial.reusable_formula, start=1):
@@ -256,7 +284,9 @@ if analysis is not None and semantic is not None and visual is not None and edit
 
     combined = {
         "source": st.session_state.get("analysis_source_name"),
-        "source_url": pending_source if pending_source not in {"upload", None} else None,
+        "source_url": pending_source
+        if pending_source not in {"upload", None}
+        else None,
         "warnings": warnings,
         "editorial": editorial.to_dict(),
         "structural": analysis.to_dict(),
@@ -284,12 +314,20 @@ if analysis is not None and semantic is not None and visual is not None and edit
 
     st.divider()
     st.subheader("Crie sua versão original")
-    st.caption("A fórmula identificada orientará a nova criação, sem copiar o conteúdo da referência.")
+    st.caption(
+        "A fórmula identificada orientará a nova criação, sem copiar o conteúdo da referência."
+    )
     theme = st.text_input("Qual será o tema?", value="IA aplicada à fisioterapia")
     audience = st.text_input("Para quem?", value="fisioterapeutas brasileiros")
     objective = st.selectbox(
         "O que você quer alcançar?",
-        ["educar", "gerar autoridade", "ganhar seguidores qualificados", "engajar", "vender"],
+        [
+            "educar",
+            "gerar autoridade",
+            "ganhar seguidores qualificados",
+            "engajar",
+            "vender",
+        ],
     )
     cta = st.text_input(
         "Próximo passo para o público",
@@ -302,7 +340,9 @@ if analysis is not None and semantic is not None and visual is not None and edit
                 theme=theme,
                 objective=objective,
                 audience=audience,
-                duration_seconds=min(60, max(15, round(analysis.duration_seconds / 5) * 5)),
+                duration_seconds=min(
+                    60, max(15, round(analysis.duration_seconds / 5) * 5)
+                ),
                 format="professor_cinematico",
                 cta=cta,
                 evidence_level="educacional",
@@ -320,7 +360,9 @@ if analysis is not None and semantic is not None and visual is not None and edit
             st.session_state.package_dir = str(output_dir)
             st.session_state.preferred_hook = package.hook
             st.session_state.nav_view = "Studio"
-            st.session_state.studio_flash = "Sua versão foi criada a partir da análise e está pronta para revisão."
+            st.session_state.studio_flash = (
+                "Sua versão foi criada a partir da análise e está pronta para revisão."
+            )
             st.switch_page("app.py")
         except Exception as exc:
             st.error(f"Não foi possível criar a versão: {exc}")

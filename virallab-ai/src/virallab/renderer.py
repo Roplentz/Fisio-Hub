@@ -38,9 +38,13 @@ def render_video(
 
     if not dry_run:
         if shutil.which(ffmpeg_bin) is None:
-            raise RenderError("FFmpeg não encontrado. Instale o FFmpeg ou use --render-dry-run.")
+            raise RenderError(
+                "FFmpeg não encontrado. Instale o FFmpeg ou use --render-dry-run."
+            )
         if shutil.which(ffprobe_bin) is None:
-            raise RenderError("FFprobe não encontrado. Ele normalmente é instalado junto com o FFmpeg.")
+            raise RenderError(
+                "FFprobe não encontrado. Ele normalmente é instalado junto com o FFmpeg."
+            )
 
     plan = json.loads(plan_path.read_text(encoding="utf-8"))
     _validate_plan(plan)
@@ -92,7 +96,11 @@ def render_video(
     if not dry_run:
         _run(concat_command)
 
-    target = Path(output_file).resolve() if output_file else root / plan["output"]["filename"]
+    target = (
+        Path(output_file).resolve()
+        if output_file
+        else root / plan["output"]["filename"]
+    )
     final_command = _final_mix_command(
         root=root,
         stitched=stitched,
@@ -105,7 +113,9 @@ def render_video(
     commands.append(final_command)
 
     command_log = generated_dir / "ffmpeg-commands.json"
-    command_log.write_text(json.dumps(commands, ensure_ascii=False, indent=2), encoding="utf-8")
+    command_log.write_text(
+        json.dumps(commands, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     if not dry_run:
         _run(final_command)
     return target
@@ -174,33 +184,37 @@ def _segment_command(
         audio_inputs = []
         audio_map = ["-map", "1:a:0"]
 
-    return base + audio_inputs + [
-        "-vf",
-        video_filter,
-        "-map",
-        "0:v:0",
-        *audio_map,
-        "-c:v",
-        "libx264",
-        "-preset",
-        "veryfast",
-        "-crf",
-        "20",
-        "-pix_fmt",
-        "yuv420p",
-        "-r",
-        str(fps),
-        "-c:a",
-        "aac",
-        "-ar",
-        "48000",
-        "-ac",
-        "2",
-        "-b:a",
-        "160k",
-        "-shortest",
-        str(output),
-    ]
+    return (
+        base
+        + audio_inputs
+        + [
+            "-vf",
+            video_filter,
+            "-map",
+            "0:v:0",
+            *audio_map,
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-crf",
+            "20",
+            "-pix_fmt",
+            "yuv420p",
+            "-r",
+            str(fps),
+            "-c:a",
+            "aac",
+            "-ar",
+            "48000",
+            "-ac",
+            "2",
+            "-b:a",
+            "160k",
+            "-shortest",
+            str(output),
+        ]
+    )
 
 
 def _final_mix_command(
@@ -224,7 +238,9 @@ def _final_mix_command(
         command += ["-stream_loop", "-1", "-i", str(music)]
         gain = 10 ** (music_level_db / 20.0)
         filters.append(f"[1:a]volume={gain:.6f}[music]")
-        filters.append("[0:a][music]amix=inputs=2:duration=first:dropout_transition=2[aout]")
+        filters.append(
+            "[0:a][music]amix=inputs=2:duration=first:dropout_transition=2[aout]"
+        )
         audio_map = "[aout]"
 
     video_filter = None

@@ -34,7 +34,9 @@ def build_multimodal_timeline(
     for moment in visual.moments:
         narrative = max(
             semantic.narrative_blocks,
-            key=lambda block: _overlap(moment.start, moment.end, block.start, block.end),
+            key=lambda block: _overlap(
+                moment.start, moment.end, block.start, block.end
+            ),
             default=None,
         )
         speech_segments = [
@@ -47,14 +49,22 @@ def build_multimodal_timeline(
 
         if moment.visual_role == "Apresentação principal" and not speech:
             recommendation = "Evitar trecho longo com apresentador sem fala; inserir narração, corte ou apoio visual."
-        elif moment.visual_role in {"B-roll ou demonstração", "Tela de apoio ou evidência"} and speech:
+        elif (
+            moment.visual_role
+            in {"B-roll ou demonstração", "Tela de apoio ou evidência"}
+            and speech
+        ):
             recommendation = "Boa oportunidade de sincronizar o apoio visual com a ideia verbal central."
-        elif label == "Hook" and moment.text_density < 0.08 and not moment.detected_text:
+        elif (
+            label == "Hook" and moment.text_density < 0.08 and not moment.detected_text
+        ):
             recommendation = "Reforçar o hook com uma frase curta e legível na tela."
         elif label == "Conclusão e CTA" and moment.face_count == 0:
             recommendation = "Considerar retornar ao apresentador no CTA para aumentar conexão e confiança."
         else:
-            recommendation = "Manter a coerência entre fala, enquadramento e função narrativa."
+            recommendation = (
+                "Manter a coerência entre fala, enquadramento e função narrativa."
+            )
 
         items.append(
             TimelineItem(

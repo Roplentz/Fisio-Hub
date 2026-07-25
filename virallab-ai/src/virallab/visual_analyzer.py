@@ -59,21 +59,41 @@ def _run(command: list[str]) -> subprocess.CompletedProcess[str]:
 
 
 def _duration(path: Path) -> float:
-    result = _run([
-        "ffprobe", "-v", "error", "-show_entries", "format=duration",
-        "-of", "json", str(path),
-    ])
+    result = _run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "json",
+            str(path),
+        ]
+    )
     try:
         value = json.loads(result.stdout)["format"]["duration"]
         return max(0.01, float(value))
     except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
-        raise VisualAnalysisError("Não foi possível determinar a duração do vídeo.") from exc
+        raise VisualAnalysisError(
+            "Não foi possível determinar a duração do vídeo."
+        ) from exc
 
 
-def _scene_boundaries(path: Path, threshold: float, duration: float) -> list[tuple[float, float]]:
+def _scene_boundaries(
+    path: Path, threshold: float, duration: float
+) -> list[tuple[float, float]]:
     command = [
-        "ffmpeg", "-hide_banner", "-i", str(path), "-filter:v",
-        f"select='gt(scene,{threshold})',metadata=print:file=-", "-an", "-f", "null", "-",
+        "ffmpeg",
+        "-hide_banner",
+        "-i",
+        str(path),
+        "-filter:v",
+        f"select='gt(scene,{threshold})',metadata=print:file=-",
+        "-an",
+        "-f",
+        "null",
+        "-",
     ]
     result = subprocess.run(command, check=False, capture_output=True, text=True)
     times: list[float] = []
@@ -83,16 +103,32 @@ def _scene_boundaries(path: Path, threshold: float, duration: float) -> list[tup
                 times.append(float(line.split("pts_time:", 1)[1].split()[0]))
             except (ValueError, IndexError):
                 continue
-    boundaries = sorted({round(item, 3) for item in times if 0.15 < item < duration - 0.15})
+    boundaries = sorted(
+        {round(item, 3) for item in times if 0.15 < item < duration - 0.15}
+    )
     points = [0.0, *boundaries, duration]
     return [(points[index], points[index + 1]) for index in range(len(points) - 1)]
 
 
 def _extract_frame(path: Path, timestamp: float, target: Path) -> None:
-    _run([
-        "ffmpeg", "-hide_banner", "-loglevel", "error", "-ss", f"{timestamp:.3f}",
-        "-i", str(path), "-frames:v", "1", "-q:v", "2", "-y", str(target),
-    ])
+    _run(
+        [
+            "ffmpeg",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-ss",
+            f"{timestamp:.3f}",
+            "-i",
+            str(path),
+            "-frames:v",
+            "1",
+            "-q:v",
+            "2",
+            "-y",
+            str(target),
+        ]
+    )
 
 
 def _load_cv2():
@@ -133,7 +169,9 @@ def _visual_role(index: int, total: int, face_count: int, text_density: float) -
     return "Apresentação principal"
 
 
-def _inspect_frame(frame_path: Path, start: float, end: float, index: int, total: int) -> VisualMoment:
+def _inspect_frame(
+    frame_path: Path, start: float, end: float, index: int, total: int
+) -> VisualMoment:
     cv2, np = _load_cv2()
     image = cv2.imread(str(frame_path))
     if image is None:
@@ -146,7 +184,9 @@ def _inspect_frame(frame_path: Path, start: float, end: float, index: int, total
 
     cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
     cascade = cv2.CascadeClassifier(cascade_path)
-    faces = cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(40, 40))
+    faces = cascade.detectMultiScale(
+        gray, scaleFactor=1.1, minNeighbors=5, minSize=(40, 40)
+    )
     face_count = len(faces)
     largest_face = max((w * h for _, _, w, h in faces), default=0)
     face_area_ratio = largest_face / max(width * height, 1)
@@ -198,7 +238,10 @@ def analyze_visuals(
     scenes = _scene_boundaries(video_path, scene_threshold, duration)
     if len(scenes) > max_moments:
         step = len(scenes) / max_moments
-        scenes = [scenes[min(round(index * step), len(scenes) - 1)] for index in range(max_moments)]
+        scenes = [
+            scenes[min(round(index * step), len(scenes) - 1)]
+            for index in range(max_moments)
+        ]
 
     if output_dir is None:
         output_root = Path(tempfile.mkdtemp(prefix="virallab-frames-"))
@@ -217,7 +260,9 @@ def analyze_visuals(
         raise VisualAnalysisError("Nenhum momento visual pôde ser analisado.")
 
     face_presence = sum(item.face_count > 0 for item in moments) / len(moments)
-    text_presence = sum(bool(item.detected_text) or item.text_density >= 0.08 for item in moments) / len(moments)
+    text_presence = sum(
+        bool(item.detected_text) or item.text_density >= 0.08 for item in moments
+    ) / len(moments)
     average_brightness = sum(item.brightness for item in moments) / len(moments)
     average_sharpness = sum(item.sharpness for item in moments) / len(moments)
     framing_changes = sum(
@@ -232,21 +277,33 @@ def analyze_visuals(
     strengths: list[str] = []
     improvements: list[str] = []
     if face_presence >= 0.55:
-        strengths.append("A presença humana é consistente e favorece conexão e autoridade.")
+        strengths.append(
+            "A presença humana é consistente e favorece conexão e autoridade."
+        )
     else:
-        improvements.append("Avaliar maior presença do apresentador ou uma alternância mais intencional com B-roll.")
+        improvements.append(
+            "Avaliar maior presença do apresentador ou uma alternância mais intencional com B-roll."
+        )
     if text_presence >= 0.40:
         strengths.append("Há apoio visual frequente por textos ou elementos gráficos.")
     else:
-        improvements.append("Adicionar palavras-chave na tela para reforçar compreensão sem áudio.")
+        improvements.append(
+            "Adicionar palavras-chave na tela para reforçar compreensão sem áudio."
+        )
     if framing_changes >= max(1, len(moments) // 4):
         strengths.append("O enquadramento apresenta variação visual ao longo do vídeo.")
     else:
-        improvements.append("Criar mudanças de enquadramento, zoom ou B-roll em pontos narrativos importantes.")
+        improvements.append(
+            "Criar mudanças de enquadramento, zoom ou B-roll em pontos narrativos importantes."
+        )
     if average_brightness < 55:
-        improvements.append("A imagem parece escura em parte relevante do vídeo; revisar iluminação e exposição.")
+        improvements.append(
+            "A imagem parece escura em parte relevante do vídeo; revisar iluminação e exposição."
+        )
     if average_sharpness < 45:
-        improvements.append("Alguns frames parecem pouco nítidos; revisar foco, compressão ou estabilidade.")
+        improvements.append(
+            "Alguns frames parecem pouco nítidos; revisar foco, compressão ou estabilidade."
+        )
 
     summary = (
         f"Foram examinados {len(moments)} momentos visuais. Há rosto em {face_presence:.0%} deles, "

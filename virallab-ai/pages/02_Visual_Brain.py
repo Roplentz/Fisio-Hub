@@ -7,7 +7,9 @@ import streamlit as st
 
 from virallab.workers import VisualWorker
 
-st.set_page_config(page_title="Visual Brain · RP ViralLab", page_icon="🎨", layout="wide")
+st.set_page_config(
+    page_title="Visual Brain · RP ViralLab", page_icon="🎨", layout="wide"
+)
 
 st.markdown(
     """
@@ -48,10 +50,12 @@ if package is None:
 worker = VisualWorker(brand_name=package.brief.avatar_name)
 plans = [worker.build(scene, package.brief) for scene in package.scenes]
 
-header_left, header_right = st.columns([1.6, .4])
+header_left, header_right = st.columns([1.6, 0.4])
 with header_left:
     st.markdown(f"### {package.brief.theme}")
-    st.caption(f"{len(plans)} cenas · Público: {package.brief.audience} · Objetivo: {package.brief.objective}")
+    st.caption(
+        f"{len(plans)} cenas · Público: {package.brief.audience} · Objetivo: {package.brief.objective}"
+    )
 with header_right:
     payload = {
         "project_id": st.session_state.get("project_id"),
@@ -70,13 +74,17 @@ if package_dir_value:
     package_dir = Path(package_dir_value)
     package_dir.mkdir(parents=True, exist_ok=True)
     visual_plan_path = package_dir / "visual-plan.json"
-    visual_plan_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    visual_plan_path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     st.caption(f"Plano sincronizado em {visual_plan_path.name}")
 
 for scene, plan in zip(package.scenes, plans):
     title = scene.on_screen_text or scene.narration[:72] or f"Cena {scene.index}"
     with st.expander(f"Cena {scene.index:02d} · {title}", expanded=scene.index == 1):
-        st.markdown('<div class="scene-label">INTENÇÃO CRIATIVA</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="scene-label">INTENÇÃO CRIATIVA</div>', unsafe_allow_html=True
+        )
         st.write(plan.creative_intent)
 
         strategy_tab, direction_tab, assets_tab, prompts_tab, score_tab = st.tabs(
@@ -84,7 +92,7 @@ for scene, plan in zip(package.scenes, plans):
         )
 
         with strategy_tab:
-            left, right = st.columns([1.15, .85], gap="large")
+            left, right = st.columns([1.15, 0.85], gap="large")
             with left:
                 st.markdown("#### Visual principal")
                 st.write(plan.main_visual)
@@ -144,7 +152,16 @@ for scene, plan in zip(package.scenes, plans):
         with prompts_tab:
             provider = st.selectbox(
                 "Motor",
-                ["canonical", "flux", "imagen", "ideogram", "midjourney", "veo", "runway", "kling"],
+                [
+                    "canonical",
+                    "flux",
+                    "imagen",
+                    "ideogram",
+                    "midjourney",
+                    "veo",
+                    "runway",
+                    "kling",
+                ],
                 key=f"prompt-provider-{scene.index}",
             )
             prompt = getattr(plan.prompts, provider)
@@ -168,4 +185,6 @@ with left:
         st.session_state.workspace_view = "Studio"
         st.switch_page("app.py")
 with right:
-    st.success("Visual Brain ativo. O próximo módulo conectará geração e seleção real de imagens por cena.")
+    st.success(
+        "Visual Brain ativo. O próximo módulo conectará geração e seleção real de imagens por cena."
+    )

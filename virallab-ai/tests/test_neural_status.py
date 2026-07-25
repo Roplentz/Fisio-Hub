@@ -18,7 +18,9 @@ def test_collect_neural_status_without_workspace(tmp_path: Path, monkeypatch) ->
     assert keys == {"gemini", "qwen", "embedding", "whisper", "dna", "render"}
 
 
-def test_collect_neural_status_counts_learning_and_projects(tmp_path: Path, monkeypatch) -> None:
+def test_collect_neural_status_counts_learning_and_projects(
+    tmp_path: Path, monkeypatch
+) -> None:
     monkeypatch.delenv("OLLAMA_BASE_URL", raising=False)
     store = tmp_path / "learning" / "feedback.jsonl"
     store.parent.mkdir(parents=True)

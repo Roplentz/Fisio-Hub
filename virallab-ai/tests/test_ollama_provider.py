@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import json
-
 from virallab.models import VideoBrief
 from virallab.ollama_client import cosine_similarity
 from virallab.providers import OllamaProvider

@@ -17,7 +17,9 @@ class SceneCreativePlan:
     aspect_ratio: str = "9:16"
 
 
-def build_scene_prompt(scene: Any, *, theme: str = "", visual_style: str = "RP cinematográfico") -> str:
+def build_scene_prompt(
+    scene: Any, *, theme: str = "", visual_style: str = "RP cinematográfico"
+) -> str:
     """Build a production-ready vertical-image prompt from a storyboard scene."""
     scene_type = str(getattr(scene, "scene_type", "broll"))
     direction = str(getattr(scene, "visual_direction", "")).strip()
@@ -52,7 +54,9 @@ def build_scene_prompt(scene: Any, *, theme: str = "", visual_style: str = "RP c
         f"Tema do conteúdo: {theme}." if theme else "",
         f"Direção da cena: {direction}." if direction else "",
         f"Contexto narrativo: {narration}." if narration else "",
-        f"Conceito do texto na tela: {on_screen}. Não escrever esse texto na imagem." if on_screen else "",
+        f"Conceito do texto na tela: {on_screen}. Não escrever esse texto na imagem."
+        if on_screen
+        else "",
         f"Identidade visual: {visual_style}; paleta azul-petróleo, ciano discreto e tons neutros; iluminação cinematográfica suave.",
         "Formato vertical 9:16, composição mobile-first, assunto principal centralizado, espaço seguro nas bordas para legendas.",
         "Alta qualidade, aparência humana natural, mãos anatomicamente corretas, sem texto ilegível, sem marca-d'água, sem logotipos.",
@@ -69,7 +73,9 @@ def generate_scene_asset(
     image_size: str = "1K",
 ) -> AssetRecord:
     provider = GeminiImageProvider()
-    generated = provider.generate(prompt, aspect_ratio=aspect_ratio, image_size=image_size)
+    generated = provider.generate(
+        prompt, aspect_ratio=aspect_ratio, image_size=image_size
+    )
     library = AssetLibrary(project_dir)
     return library.add_bytes(
         scene_index=int(getattr(scene, "index")),
@@ -89,7 +95,9 @@ def generate_scene_asset(
 
 def approved_assets(project_dir: str | Path) -> dict[int, AssetRecord]:
     library = AssetLibrary(project_dir)
-    return {item.scene_index: item for item in library.load() if item.status == "approved"}
+    return {
+        item.scene_index: item for item in library.load() if item.status == "approved"
+    }
 
 
 __all__ = [

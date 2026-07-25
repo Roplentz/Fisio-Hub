@@ -9,7 +9,9 @@ from virallab.asset_library import AssetLibrary
 from virallab.image_provider import GeminiImageProvider, ImageGenerationError
 from virallab.workers import VisualWorker
 
-st.set_page_config(page_title="Asset Studio · RP ViralLab", page_icon="🖼️", layout="wide")
+st.set_page_config(
+    page_title="Asset Studio · RP ViralLab", page_icon="🖼️", layout="wide"
+)
 
 st.markdown(
     """
@@ -62,13 +64,15 @@ m2.metric("Candidatos", candidate_count)
 m3.metric("Aprovados", approved_count)
 m4.metric("Motor", os.getenv("VIRALLAB_IMAGE_MODEL", "gemini-3.1-flash-image"))
 
-st.caption("A geração por IA requer GEMINI_API_KEY. Uploads manuais continuam funcionando sem chave.")
+st.caption(
+    "A geração por IA requer GEMINI_API_KEY. Uploads manuais continuam funcionando sem chave."
+)
 
 for scene in package.scenes:
     plan = plans[scene.index]
     title = scene.on_screen_text or scene.narration[:70] or f"Cena {scene.index}"
     with st.expander(f"Cena {scene.index:02d} · {title}", expanded=scene.index == 1):
-        left, right = st.columns([1.05, .95], gap="large")
+        left, right = st.columns([1.05, 0.95], gap="large")
         with left:
             st.markdown("#### Direção visual")
             st.write(plan.main_visual)
@@ -80,10 +84,22 @@ for scene in package.scenes:
                 key=f"asset-prompt-{scene.index}",
             )
             c1, c2 = st.columns(2)
-            image_size = c1.selectbox("Resolução", ["512", "1K", "2K", "4K"], index=1, key=f"size-{scene.index}")
-            aspect_ratio = c2.selectbox("Proporção", ["9:16", "4:5", "1:1", "16:9"], key=f"ratio-{scene.index}")
+            image_size = c1.selectbox(
+                "Resolução",
+                ["512", "1K", "2K", "4K"],
+                index=1,
+                key=f"size-{scene.index}",
+            )
+            aspect_ratio = c2.selectbox(
+                "Proporção", ["9:16", "4:5", "1:1", "16:9"], key=f"ratio-{scene.index}"
+            )
 
-            if st.button("✨ Gerar com Gemini", type="primary", use_container_width=True, key=f"generate-{scene.index}"):
+            if st.button(
+                "✨ Gerar com Gemini",
+                type="primary",
+                use_container_width=True,
+                key=f"generate-{scene.index}",
+            ):
                 try:
                     with st.spinner("Gerando imagem..."):
                         generated = GeminiImageProvider().generate(
@@ -98,7 +114,10 @@ for scene in package.scenes:
                             source="ai_generation",
                             provider=generated.model,
                             prompt=prompt,
-                            metadata={"aspect_ratio": aspect_ratio, "image_size": image_size},
+                            metadata={
+                                "aspect_ratio": aspect_ratio,
+                                "image_size": image_size,
+                            },
                         )
                     st.success(f"Candidato criado: {record.id}")
                     st.rerun()
@@ -110,7 +129,11 @@ for scene in package.scenes:
                 type=["png", "jpg", "jpeg", "webp"],
                 key=f"visual-upload-{scene.index}",
             )
-            if upload is not None and st.button("Adicionar upload como candidato", use_container_width=True, key=f"add-upload-{scene.index}"):
+            if upload is not None and st.button(
+                "Adicionar upload como candidato",
+                use_container_width=True,
+                key=f"add-upload-{scene.index}",
+            ):
                 suffix = Path(upload.name).suffix or ".png"
                 library.add_bytes(
                     scene_index=scene.index,
@@ -155,17 +178,28 @@ for scene in package.scenes:
                         "rejected": "REJEITADA",
                         "candidate": "CANDIDATA",
                     }.get(record.status, record.status.upper())
-                    st.markdown(f'<span class="{status_class}">{status_label}</span>', unsafe_allow_html=True)
+                    st.markdown(
+                        f'<span class="{status_class}">{status_label}</span>',
+                        unsafe_allow_html=True,
+                    )
                     st.caption(f"{record.provider} · {record.id}")
                     if record.prompt:
                         with st.expander("Ver prompt"):
                             st.write(record.prompt)
                     a, b = st.columns(2)
-                    if a.button("✓ Aprovar", use_container_width=True, key=f"approve-{record.id}"):
+                    if a.button(
+                        "✓ Aprovar",
+                        use_container_width=True,
+                        key=f"approve-{record.id}",
+                    ):
                         library.set_status(record.id, "approved")
                         st.success("Imagem aprovada e conectada ao render.")
                         st.rerun()
-                    if b.button("✕ Rejeitar", use_container_width=True, key=f"reject-{record.id}"):
+                    if b.button(
+                        "✕ Rejeitar",
+                        use_container_width=True,
+                        key=f"reject-{record.id}",
+                    ):
                         library.set_status(record.id, "rejected")
                         st.rerun()
 

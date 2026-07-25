@@ -76,14 +76,22 @@ class ProjectStore:
         directory = self.project_dir(clean_id)
         directory.mkdir(parents=True, exist_ok=True)
 
-        package_data = package.to_dict() if package is not None else self._read_package_data(directory)
+        package_data = (
+            package.to_dict()
+            if package is not None
+            else self._read_package_data(directory)
+        )
         if package_data:
             (directory / "video-package.json").write_text(
                 json.dumps(package_data, ensure_ascii=False, indent=2), encoding="utf-8"
             )
 
         approved_assets = self._approved_assets(directory)
-        theme = str((package_data.get("brief") or {}).get("theme", "")) if package_data else ""
+        theme = (
+            str((package_data.get("brief") or {}).get("theme", ""))
+            if package_data
+            else ""
+        )
         scenes = len(package_data.get("scenes", [])) if package_data else 0
         now = datetime.now(timezone.utc).isoformat()
         display_name = name.strip() or theme.strip() or f"Projeto {clean_id}"
@@ -176,7 +184,10 @@ class ProjectStore:
         with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
             for path in directory.rglob("*"):
                 if path.is_file():
-                    archive.write(path, arcname=f"project-{directory.name}/{path.relative_to(directory)}")
+                    archive.write(
+                        path,
+                        arcname=f"project-{directory.name}/{path.relative_to(directory)}",
+                    )
         return buffer.getvalue()
 
     def import_zip(self, data: bytes) -> SavedProject:
@@ -189,7 +200,11 @@ class ProjectStore:
                     if member.is_dir():
                         continue
                     relative_parts = Path(member.filename).parts
-                    relative = Path(*relative_parts[1:]) if len(relative_parts) > 1 else Path(relative_parts[0])
+                    relative = (
+                        Path(*relative_parts[1:])
+                        if len(relative_parts) > 1
+                        else Path(relative_parts[0])
+                    )
                     target = (destination / relative).resolve()
                     if destination.resolve() not in target.parents:
                         raise ValueError("Backup contém caminho inválido.")
@@ -216,7 +231,9 @@ class ProjectStore:
     def delete(self, project_id: str) -> None:
         clean_id = self._clean_id(project_id)
         shutil.rmtree(self.project_dir(clean_id), ignore_errors=True)
-        remaining = [item for item in self.list_projects() if item.project_id != clean_id]
+        remaining = [
+            item for item in self.list_projects() if item.project_id != clean_id
+        ]
         self._write_registry(remaining)
 
     def _read_package_data(self, directory: Path) -> dict[str, Any]:
@@ -235,18 +252,26 @@ class ProjectStore:
             return 0
         try:
             payload = json.loads(manifest.read_text(encoding="utf-8"))
-            return sum(item.get("status") == "approved" for item in payload.get("assets", []))
+            return sum(
+                item.get("status") == "approved" for item in payload.get("assets", [])
+            )
         except json.JSONDecodeError:
             return 0
 
     def _upsert_registry(self, project: SavedProject) -> None:
         items = {item.project_id: item for item in self.list_projects()}
         items[project.project_id] = project
-        self._write_registry(sorted(items.values(), key=lambda item: item.updated_at, reverse=True))
+        self._write_registry(
+            sorted(items.values(), key=lambda item: item.updated_at, reverse=True)
+        )
 
     def _write_registry(self, projects: list[SavedProject]) -> None:
         self.registry_path.write_text(
-            json.dumps({"version": "1.0", "projects": [item.to_dict() for item in projects]}, ensure_ascii=False, indent=2),
+            json.dumps(
+                {"version": "1.0", "projects": [item.to_dict() for item in projects]},
+                ensure_ascii=False,
+                indent=2,
+            ),
             encoding="utf-8",
         )
 

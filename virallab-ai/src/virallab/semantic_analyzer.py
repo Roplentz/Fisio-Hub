@@ -68,7 +68,9 @@ class SemanticAnalysis:
         return ("\n".join(lines).strip() + "\n") if lines else ""
 
 
-def unavailable_semantic_analysis(reason: str, language: str = "pt") -> SemanticAnalysis:
+def unavailable_semantic_analysis(
+    reason: str, language: str = "pt"
+) -> SemanticAnalysis:
     """Create a valid partial result so visual/structural analysis can continue."""
     clean_reason = _normalize(reason)[:600]
     return SemanticAnalysis(
@@ -83,7 +85,9 @@ def unavailable_semantic_analysis(reason: str, language: str = "pt") -> Semantic
         narrative_blocks=[],
         summary="A análise verbal não ficou disponível; o diagnóstico continuou com estrutura e imagem.",
         strengths=[],
-        improvements=["Reprocessar a transcrição quando o motor de áudio estiver disponível."],
+        improvements=[
+            "Reprocessar a transcrição quando o motor de áudio estiver disponível."
+        ],
         available=False,
         warning=clean_reason,
     )
@@ -106,7 +110,21 @@ def _score_hook(text: str) -> int:
     score = 42
     if "?" in text:
         score += 15
-    if any(token in lowered for token in ("você", "voce", "sabia", "por que", "como", "erro", "nunca", "verdade", "atenção", "atencao")):
+    if any(
+        token in lowered
+        for token in (
+            "você",
+            "voce",
+            "sabia",
+            "por que",
+            "como",
+            "erro",
+            "nunca",
+            "verdade",
+            "atenção",
+            "atencao",
+        )
+    ):
         score += 18
     if any(char.isdigit() for char in text):
         score += 8
@@ -120,8 +138,20 @@ def _score_hook(text: str) -> int:
 
 def _find_cta(segments: list[TranscriptSegment]) -> tuple[str | None, int]:
     markers = (
-        "siga", "compartilhe", "comente", "salve", "clique", "acesse", "mande", "envie",
-        "inscreva", "saiba mais", "link", "me chama", "fale comigo", "baixe",
+        "siga",
+        "compartilhe",
+        "comente",
+        "salve",
+        "clique",
+        "acesse",
+        "mande",
+        "envie",
+        "inscreva",
+        "saiba mais",
+        "link",
+        "me chama",
+        "fale comigo",
+        "baixe",
     )
     candidates = segments[-4:] if segments else []
     for segment in reversed(candidates):
@@ -136,7 +166,13 @@ def _build_blocks(segments: list[TranscriptSegment]) -> list[NarrativeBlock]:
     if not segments:
         return []
     total_end = max(segment.end for segment in segments)
-    boundaries = [0.0, total_end * 0.16, total_end * 0.50, total_end * 0.82, total_end + 0.001]
+    boundaries = [
+        0.0,
+        total_end * 0.16,
+        total_end * 0.50,
+        total_end * 0.82,
+        total_end + 0.001,
+    ]
     labels = ["Hook", "Problema e contexto", "Desenvolvimento", "Conclusão e CTA"]
     blocks: list[NarrativeBlock] = []
     for index, label in enumerate(labels):
@@ -144,21 +180,32 @@ def _build_blocks(segments: list[TranscriptSegment]) -> list[NarrativeBlock]:
         selected = [item for item in segments if item.start < end and item.end >= start]
         text = _normalize(" ".join(item.text for item in selected))
         if text:
-            blocks.append(NarrativeBlock(label, round(start, 2), round(min(end, total_end), 2), text))
+            blocks.append(
+                NarrativeBlock(
+                    label, round(start, 2), round(min(end, total_end), 2), text
+                )
+            )
     return blocks
 
 
-def analyze_transcript(segments: Iterable[TranscriptSegment], language: str = "pt") -> SemanticAnalysis:
+def analyze_transcript(
+    segments: Iterable[TranscriptSegment], language: str = "pt"
+) -> SemanticAnalysis:
     items = list(segments)
     if not items:
-        raise SemanticAnalysisError("Nenhuma fala foi reconhecida no vídeo. O arquivo pode estar sem áudio ou com volume muito baixo.")
+        raise SemanticAnalysisError(
+            "Nenhuma fala foi reconhecida no vídeo. O arquivo pode estar sem áudio ou com volume muito baixo."
+        )
 
     transcript = _normalize(" ".join(item.text for item in items))
     duration = max(item.end for item in items)
     word_count = len(transcript.split())
     wpm = round(word_count / max(duration / 60, 0.01))
     hook_segments = [item for item in items if item.start <= 5.0]
-    hook_text = _normalize(" ".join(item.text for item in hook_segments)) or items[0].text.strip()
+    hook_text = (
+        _normalize(" ".join(item.text for item in hook_segments))
+        or items[0].text.strip()
+    )
     hook_score = _score_hook(hook_text)
     cta_text, cta_score = _find_cta(items)
     blocks = _build_blocks(items)
@@ -166,19 +213,31 @@ def analyze_transcript(segments: Iterable[TranscriptSegment], language: str = "p
     strengths: list[str] = []
     improvements: list[str] = []
     if hook_score >= 70:
-        strengths.append("O início apresenta uma promessa, pergunta ou tensão verbal clara.")
+        strengths.append(
+            "O início apresenta uma promessa, pergunta ou tensão verbal clara."
+        )
     else:
-        improvements.append("Tornar os primeiros cinco segundos mais específicos, provocativos e orientados ao público.")
+        improvements.append(
+            "Tornar os primeiros cinco segundos mais específicos, provocativos e orientados ao público."
+        )
     if 105 <= wpm <= 175:
-        strengths.append("A velocidade da fala está em uma faixa adequada para conteúdo educativo curto.")
+        strengths.append(
+            "A velocidade da fala está em uma faixa adequada para conteúdo educativo curto."
+        )
     elif wpm > 175:
-        improvements.append("Reduzir a velocidade ou inserir pausas para melhorar a compreensão.")
+        improvements.append(
+            "Reduzir a velocidade ou inserir pausas para melhorar a compreensão."
+        )
     else:
-        improvements.append("Aumentar a concisão ou o ritmo para evitar perda de atenção.")
+        improvements.append(
+            "Aumentar a concisão ou o ritmo para evitar perda de atenção."
+        )
     if cta_text:
         strengths.append("Foi identificada uma chamada para ação no encerramento.")
     else:
-        improvements.append("Adicionar uma chamada para ação explícita e coerente com o objetivo do vídeo.")
+        improvements.append(
+            "Adicionar uma chamada para ação explícita e coerente com o objetivo do vídeo."
+        )
 
     summary = (
         f"Foram reconhecidas {word_count} palavras em {duration:.1f}s, com ritmo aproximado de {wpm} palavras/minuto. "
@@ -206,16 +265,33 @@ def _audio_stream_status(path: Path) -> tuple[bool | None, str]:
     if not ffprobe:
         return None, "FFprobe não está disponível para verificar a faixa de áudio."
     command = [
-        ffprobe, "-v", "error", "-select_streams", "a:0", "-show_entries",
-        "stream=codec_name,channels", "-of", "json", str(path),
+        ffprobe,
+        "-v",
+        "error",
+        "-select_streams",
+        "a:0",
+        "-show_entries",
+        "stream=codec_name,channels",
+        "-of",
+        "json",
+        str(path),
     ]
     try:
-        result = subprocess.run(command, capture_output=True, text=True, timeout=20, check=False)
+        result = subprocess.run(
+            command, capture_output=True, text=True, timeout=20, check=False
+        )
         if result.returncode != 0:
-            return None, _normalize(result.stderr)[:300] or "FFprobe não conseguiu ler o arquivo."
+            return None, _normalize(result.stderr)[
+                :300
+            ] or "FFprobe não conseguiu ler o arquivo."
         payload = json.loads(result.stdout or "{}")
         streams = payload.get("streams", [])
-        return bool(streams), "Faixa de áudio detectada." if streams else "O vídeo não possui faixa de áudio."
+        return (
+            bool(streams),
+            "Faixa de áudio detectada."
+            if streams
+            else "O vídeo não possui faixa de áudio.",
+        )
     except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError) as exc:
         return None, f"Não foi possível verificar o áudio: {exc}"
 
@@ -229,13 +305,19 @@ def _collect_segments(raw_segments: Iterable[Any]) -> list[TranscriptSegment]:
                 continue
             start = float(getattr(item, "start", 0.0) or 0.0)
             end = float(getattr(item, "end", start) or start)
-            segments.append(TranscriptSegment(round(start, 2), round(max(start, end), 2), text))
+            segments.append(
+                TranscriptSegment(round(start, 2), round(max(start, end), 2), text)
+            )
     except (IndexError, TypeError, ValueError, RuntimeError) as exc:
-        raise SemanticAnalysisError(f"O Whisper interrompeu a leitura dos segmentos: {type(exc).__name__}: {exc}") from exc
+        raise SemanticAnalysisError(
+            f"O Whisper interrompeu a leitura dos segmentos: {type(exc).__name__}: {exc}"
+        ) from exc
     return segments
 
 
-def _run_whisper(model: Any, video_path: Path, language: str | None, *, safe_mode: bool) -> tuple[list[TranscriptSegment], Any]:
+def _run_whisper(
+    model: Any, video_path: Path, language: str | None, *, safe_mode: bool
+) -> tuple[list[TranscriptSegment], Any]:
     options: dict[str, Any] = {
         "language": language,
         "vad_filter": not safe_mode,
@@ -273,7 +355,9 @@ def transcribe_video(
     try:
         model = WhisperModel(model_size, device=device, compute_type=compute_type)
     except Exception as exc:
-        raise SemanticAnalysisError(f"Não foi possível iniciar o Whisper ({model_size}/{device}/{compute_type}): {exc}") from exc
+        raise SemanticAnalysisError(
+            f"Não foi possível iniciar o Whisper ({model_size}/{device}/{compute_type}): {exc}"
+        ) from exc
 
     first_error = ""
     try:
@@ -286,7 +370,9 @@ def transcribe_video(
             detail = f"tentativa padrão: {first_error}; modo seguro: {type(retry_exc).__name__}: {retry_exc}"
             if has_audio is None:
                 detail += f"; diagnóstico de áudio: {audio_detail}"
-            raise SemanticAnalysisError(f"Falha ao transcrever o vídeo após nova tentativa. {detail}") from retry_exc
+            raise SemanticAnalysisError(
+                f"Falha ao transcrever o vídeo após nova tentativa. {detail}"
+            ) from retry_exc
 
     detected_language = getattr(info, "language", None) or language or "desconhecido"
     try:

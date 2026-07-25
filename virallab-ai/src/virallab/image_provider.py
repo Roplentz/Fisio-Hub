@@ -42,7 +42,9 @@ class GeminiImageProvider:
 
     def __init__(self, api_key: str | None = None, model: str | None = None) -> None:
         self.api_key = api_key or os.getenv("GEMINI_API_KEY", "")
-        self.model = model or os.getenv("VIRALLAB_IMAGE_MODEL", "gemini-3.1-flash-image")
+        self.model = model or os.getenv(
+            "VIRALLAB_IMAGE_MODEL", "gemini-3.1-flash-image"
+        )
         if not self.api_key:
             raise ValueError("GEMINI_API_KEY não configurada.")
 
@@ -77,9 +79,13 @@ class GeminiImageProvider:
                 result = json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode("utf-8", errors="replace")[-1500:]
-            raise ImageGenerationError(f"Gemini recusou a geração ({exc.code}): {detail}") from exc
+            raise ImageGenerationError(
+                f"Gemini recusou a geração ({exc.code}): {detail}"
+            ) from exc
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
-            raise ImageGenerationError(f"Falha ao gerar imagem com Gemini: {exc}") from exc
+            raise ImageGenerationError(
+                f"Falha ao gerar imagem com Gemini: {exc}"
+            ) from exc
 
         encoded, mime_type = _find_image_payload(result)
         if not encoded:
@@ -87,7 +93,9 @@ class GeminiImageProvider:
         try:
             image_bytes = base64.b64decode(encoded)
         except (ValueError, TypeError) as exc:
-            raise ImageGenerationError("A imagem retornada pelo Gemini está corrompida.") from exc
+            raise ImageGenerationError(
+                "A imagem retornada pelo Gemini está corrompida."
+            ) from exc
         return GeneratedImage(
             data=image_bytes,
             mime_type=mime_type or "image/png",
@@ -101,12 +109,16 @@ def _find_image_payload(value: Any) -> tuple[str, str]:
     if isinstance(value, dict):
         output_image = value.get("output_image")
         if isinstance(output_image, dict) and output_image.get("data"):
-            return str(output_image["data"]), str(output_image.get("mime_type", "image/png"))
+            return str(output_image["data"]), str(
+                output_image.get("mime_type", "image/png")
+            )
 
         inline_data = value.get("inline_data") or value.get("inlineData")
         if isinstance(inline_data, dict) and inline_data.get("data"):
             return str(inline_data["data"]), str(
-                inline_data.get("mime_type") or inline_data.get("mimeType") or "image/png"
+                inline_data.get("mime_type")
+                or inline_data.get("mimeType")
+                or "image/png"
             )
 
         if value.get("type") == "image" and value.get("data"):

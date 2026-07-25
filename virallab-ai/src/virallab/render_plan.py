@@ -20,7 +20,9 @@ class RenderLayer:
 def build_render_plan(package: VideoPackage) -> dict[str, object]:
     layers: list[RenderLayer] = []
     for scene in package.scenes:
-        source_type, source = _source_for_scene(scene.scene_type, scene.index, scene.asset_query)
+        source_type, source = _source_for_scene(
+            scene.scene_type, scene.index, scene.asset_query
+        )
         layers.append(
             RenderLayer(
                 scene_index=scene.index,

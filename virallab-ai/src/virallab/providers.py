@@ -9,7 +9,8 @@ from typing import Any, Protocol
 from .gemini_client import GeminiAPIError, configured_model, generate_json, get_api_key
 from .learning import build_learning_profile, learning_prompt, load_feedback
 from .models import VideoBrief
-from .ollama_client import OllamaError, chat_json, is_configured as ollama_is_configured
+from .ollama_client import OllamaError, chat_json
+from .ollama_client import is_configured as ollama_is_configured
 
 
 class ScriptProvider(Protocol):
@@ -92,7 +93,9 @@ class OllamaProvider:
         _attach_session_reference_dna(brief)
         _attach_learning_profile(brief)
         try:
-            data, used_model = chat_json(_build_prompt(brief), model=self.model, timeout=150)
+            data, used_model = chat_json(
+                _build_prompt(brief), model=self.model, timeout=150
+            )
         except OllamaError as exc:
             raise RuntimeError(f"Falha ao consultar Qwen local: {exc}") from exc
         result = _normalize_generated(data)
@@ -144,7 +147,9 @@ def _normalize_generated(data: dict[str, Any]) -> dict[str, Any]:
     required = {"hook", "thesis", "caption"}
     missing = required.difference(data)
     if missing:
-        raise RuntimeError(f"O modelo não retornou campos obrigatórios: {sorted(missing)}")
+        raise RuntimeError(
+            f"O modelo não retornou campos obrigatórios: {sorted(missing)}"
+        )
     result: dict[str, Any] = {
         "hook": str(data["hook"]).strip(),
         "thesis": str(data["thesis"]).strip(),
@@ -160,38 +165,52 @@ def _normalize_generated(data: dict[str, Any]) -> dict[str, Any]:
 def _attach_session_reference_dna(brief: VideoBrief) -> None:
     try:
         import streamlit as st
+
         editorial = st.session_state.get("editorial_analysis")
         if editorial is not None and hasattr(editorial, "to_dict"):
             data = editorial.to_dict()
-            brief.reference_dna.update({
-                "thesis": data.get("thesis"),
-                "promise": data.get("promise"),
-                "target_audience": data.get("target_audience"),
-                "attention_mechanism": data.get("attention_mechanism"),
-                "hook_type": data.get("hook_type"),
-                "retention_risks": data.get("retention_risks", []),
-                "specific_recommendations": data.get("specific_recommendations", []),
-                "reusable_formula": data.get("reusable_formula", []),
-                "priority_action": data.get("priority_action"),
-                "emotional_drivers": data.get("emotional_drivers", []),
-                "narrative_structure": data.get("narrative_structure", []),
-            })
+            brief.reference_dna.update(
+                {
+                    "thesis": data.get("thesis"),
+                    "promise": data.get("promise"),
+                    "target_audience": data.get("target_audience"),
+                    "attention_mechanism": data.get("attention_mechanism"),
+                    "hook_type": data.get("hook_type"),
+                    "retention_risks": data.get("retention_risks", []),
+                    "specific_recommendations": data.get(
+                        "specific_recommendations", []
+                    ),
+                    "reusable_formula": data.get("reusable_formula", []),
+                    "priority_action": data.get("priority_action"),
+                    "emotional_drivers": data.get("emotional_drivers", []),
+                    "narrative_structure": data.get("narrative_structure", []),
+                }
+            )
     except Exception:
         return
 
 
 def _attach_learning_profile(brief: VideoBrief) -> None:
     explicit = os.getenv("VIRALLAB_LEARNING_STORE", "").strip()
-    candidates = [Path(explicit)] if explicit else [
-        Path("workspace/learning/feedback.jsonl"),
-        Path(__file__).resolve().parents[2] / "workspace" / "learning" / "feedback.jsonl",
-    ]
+    candidates = (
+        [Path(explicit)]
+        if explicit
+        else [
+            Path("workspace/learning/feedback.jsonl"),
+            Path(__file__).resolve().parents[2]
+            / "workspace"
+            / "learning"
+            / "feedback.jsonl",
+        ]
+    )
     records: list[dict[str, Any]] = []
     for path in candidates:
         records = load_feedback(path)
         if records:
             break
-    brief.reference_dna["learning_profile"] = build_learning_profile(records, theme=brief.theme)
+    brief.reference_dna["learning_profile"] = build_learning_profile(
+        records, theme=brief.theme
+    )
 
 
 def select_provider(name: str = "auto") -> ScriptProvider:

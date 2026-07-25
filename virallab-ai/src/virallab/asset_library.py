@@ -132,7 +132,11 @@ class AssetLibrary:
                 item.status = status
                 if status == "approved":
                     for other in records:
-                        if other.scene_index == item.scene_index and other.id != item.id and other.status == "approved":
+                        if (
+                            other.scene_index == item.scene_index
+                            and other.id != item.id
+                            and other.status == "approved"
+                        ):
                             other.status = "candidate"
                 break
         if selected is None:
@@ -150,7 +154,9 @@ class AssetLibrary:
         source = self.resolve(record)
         assets_dir = self.project_dir / "assets"
         assets_dir.mkdir(parents=True, exist_ok=True)
-        target = assets_dir / f"visual-scene-{record.scene_index:02d}{source.suffix.lower()}"
+        target = (
+            assets_dir / f"visual-scene-{record.scene_index:02d}{source.suffix.lower()}"
+        )
         shutil.copy2(source, target)
         self._sync_render_plan(record.scene_index, target)
         return target
@@ -172,4 +178,6 @@ class AssetLibrary:
                 changed = True
                 break
         if changed:
-            plan_path.write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
+            plan_path.write_text(
+                json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8"
+            )

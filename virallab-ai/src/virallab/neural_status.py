@@ -32,7 +32,11 @@ def collect_neural_status(workspace: str | Path) -> dict[str, Any]:
     feedback_store = root / "learning" / "feedback.jsonl"
     projects_dir = root / "projects"
     feedback_count = _jsonl_count(feedback_store)
-    project_count = sum(1 for item in projects_dir.iterdir() if item.is_dir()) if projects_dir.exists() else 0
+    project_count = (
+        sum(1 for item in projects_dir.iterdir() if item.is_dir())
+        if projects_dir.exists()
+        else 0
+    )
 
     ollama = _ollama_status()
     models = ollama.pop("models", [])
@@ -53,23 +57,37 @@ def collect_neural_status(workspace: str | Path) -> dict[str, Any]:
         ServiceStatus(
             key="qwen",
             label="Qwen local",
-            state="ready" if ollama["state"] == "ready" and _has_model(models, qwen_model) else ollama["state"],
+            state="ready"
+            if ollama["state"] == "ready" and _has_model(models, qwen_model)
+            else ollama["state"],
             detail=qwen_model if _has_model(models, qwen_model) else ollama["detail"],
-            action=f"Execute: ollama pull {qwen_model}" if ollama["state"] == "ready" and not _has_model(models, qwen_model) else ollama.get("action", ""),
+            action=f"Execute: ollama pull {qwen_model}"
+            if ollama["state"] == "ready" and not _has_model(models, qwen_model)
+            else ollama.get("action", ""),
         ),
         ServiceStatus(
             key="embedding",
             label="Memória BGE-M3",
-            state="ready" if ollama["state"] == "ready" and _has_model(models, embedding_model) else ollama["state"],
-            detail=embedding_model if _has_model(models, embedding_model) else "Modelo de embeddings ainda não detectado",
-            action=f"Execute: ollama pull {embedding_model}" if ollama["state"] == "ready" and not _has_model(models, embedding_model) else ollama.get("action", ""),
+            state="ready"
+            if ollama["state"] == "ready" and _has_model(models, embedding_model)
+            else ollama["state"],
+            detail=embedding_model
+            if _has_model(models, embedding_model)
+            else "Modelo de embeddings ainda não detectado",
+            action=f"Execute: ollama pull {embedding_model}"
+            if ollama["state"] == "ready" and not _has_model(models, embedding_model)
+            else ollama.get("action", ""),
         ),
         ServiceStatus(
             key="whisper",
             label="Whisper",
             state="ready" if whisper_installed and ffmpeg_ready else "setup",
-            detail="Transcrição local e diagnóstico de áudio disponíveis" if whisper_installed and ffmpeg_ready else "Whisper, FFmpeg ou FFprobe não disponível",
-            action="Instale faster-whisper, FFmpeg e FFprobe." if not (whisper_installed and ffmpeg_ready) else "",
+            detail="Transcrição local e diagnóstico de áudio disponíveis"
+            if whisper_installed and ffmpeg_ready
+            else "Whisper, FFmpeg ou FFprobe não disponível",
+            action="Instale faster-whisper, FFmpeg e FFprobe."
+            if not (whisper_installed and ffmpeg_ready)
+            else "",
         ),
         ServiceStatus(
             key="dna",
@@ -82,15 +100,21 @@ def collect_neural_status(workspace: str | Path) -> dict[str, Any]:
             key="render",
             label="Render",
             state="ready" if ffmpeg_ready else "setup",
-            detail="FFmpeg e FFprobe disponíveis" if ffmpeg_ready else "Motor de vídeo incompleto",
-            action="Instale FFmpeg e FFprobe no ambiente de execução." if not ffmpeg_ready else "",
+            detail="FFmpeg e FFprobe disponíveis"
+            if ffmpeg_ready
+            else "Motor de vídeo incompleto",
+            action="Instale FFmpeg e FFprobe no ambiente de execução."
+            if not ffmpeg_ready
+            else "",
         ),
         ServiceStatus(
             key="drive",
             label="Google Drive",
             state=drive.state,
             detail=drive.detail,
-            action="Adicione folder_id e service_account em [google_drive] nos Secrets." if drive.state == "setup" else "",
+            action="Adicione folder_id e service_account em [google_drive] nos Secrets."
+            if drive.state == "setup"
+            else "",
         ),
     ]
 
@@ -125,16 +149,29 @@ def _ollama_status() -> dict[str, Any]:
             "action": str(exc)[:180],
             "models": [],
         }
-    names = [str(item.get("name", "")) for item in payload.get("models", []) if isinstance(item, dict)]
-    return {"state": "ready", "detail": f"{len(names)} modelo(s) detectado(s)", "action": "", "models": names}
+    names = [
+        str(item.get("name", ""))
+        for item in payload.get("models", [])
+        if isinstance(item, dict)
+    ]
+    return {
+        "state": "ready",
+        "detail": f"{len(names)} modelo(s) detectado(s)",
+        "action": "",
+        "models": names,
+    }
 
 
 def _has_model(models: list[str], expected: str) -> bool:
     expected_base = expected.split(":", 1)[0]
-    return any(name == expected or name.split(":", 1)[0] == expected_base for name in models)
+    return any(
+        name == expected or name.split(":", 1)[0] == expected_base for name in models
+    )
 
 
 def _jsonl_count(path: Path) -> int:
     if not path.exists():
         return 0
-    return sum(1 for line in path.read_text(encoding="utf-8").splitlines() if line.strip())
+    return sum(
+        1 for line in path.read_text(encoding="utf-8").splitlines() if line.strip()
+    )

@@ -29,7 +29,9 @@ def test_learning_profile_prioritizes_approved_relevant_feedback():
         },
     ]
 
-    profile = build_learning_profile(records, theme="inteligência artificial em fisioterapia")
+    profile = build_learning_profile(
+        records, theme="inteligência artificial em fisioterapia"
+    )
 
     assert profile["examples_used"] == 1
     assert profile["preferred_styles"] == ["Mais científico"]

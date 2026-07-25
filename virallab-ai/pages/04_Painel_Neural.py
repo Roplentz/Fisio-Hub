@@ -9,7 +9,9 @@ from virallab.neural_status import collect_neural_status
 APP_ROOT = Path(__file__).resolve().parents[1]
 WORKSPACE = APP_ROOT / "workspace"
 
-st.set_page_config(page_title="Painel Neural · RP ViralLab", page_icon="🧠", layout="wide")
+st.set_page_config(
+    page_title="Painel Neural · RP ViralLab", page_icon="🧠", layout="wide"
+)
 
 st.markdown(
     """
@@ -73,19 +75,24 @@ st.markdown("### Estado dos serviços")
 services = status["services"]
 for start in range(0, len(services), 2):
     columns = st.columns(2)
-    for column, service in zip(columns, services[start:start + 2]):
+    for column, service in zip(columns, services[start : start + 2]):
         state = service["state"]
-        label = {"ready": "Ativo", "learning": "Aprendendo", "setup": "Configurar", "offline": "Offline"}.get(state, state)
+        label = {
+            "ready": "Ativo",
+            "learning": "Aprendendo",
+            "setup": "Configurar",
+            "offline": "Offline",
+        }.get(state, state)
         action = service.get("action", "")
         with column:
             st.markdown(
                 f"""
                 <div class="status-card">
                   <div class="status-top">
-                    <div class="status-name">{service['label']}</div>
+                    <div class="status-name">{service["label"]}</div>
                     <div class="status-pill {state}">{label}</div>
                   </div>
-                  <div class="status-detail">{service['detail']}</div>
+                  <div class="status-detail">{service["detail"]}</div>
                   <div class="status-action">{action}</div>
                 </div>
                 """,

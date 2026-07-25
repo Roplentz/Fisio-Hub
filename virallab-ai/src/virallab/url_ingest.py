@@ -21,7 +21,9 @@ def _validate_url(url: str) -> str:
     normalized = url.strip()
     parsed = urlparse(normalized)
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-        raise URLIngestError("Informe uma URL pública válida iniciada por http:// ou https://.")
+        raise URLIngestError(
+            "Informe uma URL pública válida iniciada por http:// ou https://."
+        )
     return normalized
 
 
@@ -34,7 +36,9 @@ def download_video_url(url: str, output_dir: str | Path) -> ImportedVideo:
     try:
         import yt_dlp
     except ImportError as exc:
-        raise URLIngestError("A importação por URL não está instalada neste ambiente.") from exc
+        raise URLIngestError(
+            "A importação por URL não está instalada neste ambiente."
+        ) from exc
 
     source_url = _validate_url(url)
     destination = Path(output_dir)
@@ -65,12 +69,27 @@ def download_video_url(url: str, output_dir: str | Path) -> ImportedVideo:
     candidates = [prepared]
     if prepared.suffix.lower() != ".mp4":
         candidates.insert(0, prepared.with_suffix(".mp4"))
-    video_path = next((candidate for candidate in candidates if candidate.exists()), None)
+    video_path = next(
+        (candidate for candidate in candidates if candidate.exists()), None
+    )
     if video_path is None:
-        matches = sorted(destination.glob(f"{info.get('id', '')}-*"), key=lambda item: item.stat().st_mtime, reverse=True)
-        video_path = next((item for item in matches if item.suffix.lower() in {".mp4", ".mov", ".mkv", ".webm", ".m4v"}), None)
+        matches = sorted(
+            destination.glob(f"{info.get('id', '')}-*"),
+            key=lambda item: item.stat().st_mtime,
+            reverse=True,
+        )
+        video_path = next(
+            (
+                item
+                for item in matches
+                if item.suffix.lower() in {".mp4", ".mov", ".mkv", ".webm", ".m4v"}
+            ),
+            None,
+        )
     if video_path is None:
-        raise URLIngestError("O download terminou, mas nenhum arquivo de vídeo compatível foi encontrado.")
+        raise URLIngestError(
+            "O download terminou, mas nenhum arquivo de vídeo compatível foi encontrado."
+        )
 
     return ImportedVideo(
         path=video_path,

@@ -14,7 +14,10 @@ def test_missing_video_raises(tmp_path: Path) -> None:
         analyze_video(tmp_path / "missing.mp4")
 
 
-@pytest.mark.skipif(shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None, reason="FFmpeg required")
+@pytest.mark.skipif(
+    shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None,
+    reason="FFmpeg required",
+)
 def test_analyze_short_vertical_video(tmp_path: Path) -> None:
     output = tmp_path / "sample.mp4"
     subprocess.run(

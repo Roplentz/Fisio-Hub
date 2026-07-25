@@ -32,8 +32,14 @@ def test_package_roundtrip_stays_loadable() -> None:
 def test_transcript_analysis_handles_normal_segments() -> None:
     analysis = analyze_transcript(
         [
-            TranscriptSegment(0.0, 2.0, "Você sabia que a IA pode reduzir tarefas repetitivas?"),
-            TranscriptSegment(2.0, 6.0, "Ela ajuda a organizar informações sem substituir o julgamento clínico."),
+            TranscriptSegment(
+                0.0, 2.0, "Você sabia que a IA pode reduzir tarefas repetitivas?"
+            ),
+            TranscriptSegment(
+                2.0,
+                6.0,
+                "Ela ajuda a organizar informações sem substituir o julgamento clínico.",
+            ),
             TranscriptSegment(6.0, 8.0, "Siga para aprender mais."),
         ]
     )

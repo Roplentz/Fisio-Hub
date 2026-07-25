@@ -43,16 +43,22 @@ class VisualWorker:
             typography=["Inter Bold", "Inter Regular"],
             shot=self._shot(scene),
             angle="eye level",
-            camera_movement="slow push-in" if scene.scene_type in {"avatar", "proof"} else "static with subtle parallax",
+            camera_movement="slow push-in"
+            if scene.scene_type in {"avatar", "proof"}
+            else "static with subtle parallax",
             lighting="soft frontal key light with controlled contrast",
             transition="hard cut" if scene.index <= 2 else "short match cut",
             motion_notes="Animate only the key phrase; avoid decorative motion without narrative function.",
             prompts=PromptBundle(
                 canonical=canonical,
-                flux=canonical + ", editorial photography, vertical 9:16, natural skin, no text",
-                imagen=canonical + ", premium educational campaign, vertical composition, no watermark",
-                ideogram=canonical + ", reserve clean negative space for Portuguese headline",
-                midjourney=canonical + " --ar 9:16 --style raw --no text, watermark, distorted hands",
+                flux=canonical
+                + ", editorial photography, vertical 9:16, natural skin, no text",
+                imagen=canonical
+                + ", premium educational campaign, vertical composition, no watermark",
+                ideogram=canonical
+                + ", reserve clean negative space for Portuguese headline",
+                midjourney=canonical
+                + " --ar 9:16 --style raw --no text, watermark, distorted hands",
                 veo=self._video_prompt(scene, brief, main_visual),
                 runway=self._video_prompt(scene, brief, main_visual),
                 kling=self._video_prompt(scene, brief, main_visual),
@@ -66,7 +72,11 @@ class VisualWorker:
                 lighting="clean, soft and credible",
                 texture="subtle glass and clinical-tech surfaces",
                 composition="strong subject, negative space, one focal idea per frame",
-                references=["editorial health technology", "premium educational content", "cinematic professor"],
+                references=[
+                    "editorial health technology",
+                    "premium educational content",
+                    "cinematic professor",
+                ],
             ),
             score=score.normalized(),
             continuity_notes=[
@@ -106,7 +116,11 @@ class VisualWorker:
 
     @staticmethod
     def _setting(scene: Scene) -> str:
-        return "professional studio or real clinical-educational environment" if scene.scene_type == "avatar" else "context appropriate to the narration"
+        return (
+            "professional studio or real clinical-educational environment"
+            if scene.scene_type == "avatar"
+            else "context appropriate to the narration"
+        )
 
     @staticmethod
     def _props(scene: Scene) -> list[str]:
@@ -124,16 +138,24 @@ class VisualWorker:
     @staticmethod
     def _broll(scene: Scene, brief: VideoBrief) -> list[str]:
         suggestions = [scene.asset_query] if scene.asset_query else []
-        suggestions.extend([
-            f"{brief.audience} em situação real de trabalho",
-            f"detalhe visual que comprove: {scene.narration[:80]}",
-        ])
+        suggestions.extend(
+            [
+                f"{brief.audience} em situação real de trabalho",
+                f"detalhe visual que comprove: {scene.narration[:80]}",
+            ]
+        )
         return suggestions
 
     @staticmethod
     def _icons(scene: Scene) -> list[str]:
         text = scene.narration.lower()
-        mapping = {"ia": "brain-circuit", "tempo": "clock", "dados": "chart", "dor": "body-pain", "resultado": "trend-up"}
+        mapping = {
+            "ia": "brain-circuit",
+            "tempo": "clock",
+            "dados": "chart",
+            "dor": "body-pain",
+            "resultado": "trend-up",
+        }
         return [icon for term, icon in mapping.items() if term in text]
 
     @staticmethod
@@ -151,7 +173,9 @@ class VisualWorker:
         }.get(scene.scene_type, "medium shot")
 
     @staticmethod
-    def _canonical_prompt(scene: Scene, brief: VideoBrief, main_visual: str, palette: list[str]) -> str:
+    def _canonical_prompt(
+        scene: Scene, brief: VideoBrief, main_visual: str, palette: list[str]
+    ) -> str:
         return (
             f"Create a vertical visual for scene {scene.index} of a short educational video about {brief.theme}. "
             f"Main visual: {main_visual}. Narration meaning: {scene.narration}. "

@@ -1,4 +1,8 @@
-from virallab.semantic_analyzer import NarrativeBlock, SemanticAnalysis, TranscriptSegment
+from virallab.semantic_analyzer import (
+    NarrativeBlock,
+    SemanticAnalysis,
+    TranscriptSegment,
+)
 from virallab.timeline_builder import build_multimodal_timeline
 from virallab.visual_analyzer import VisualAnalysis, VisualMoment
 
@@ -27,9 +31,35 @@ def test_build_multimodal_timeline_aligns_speech_and_visual_role():
         improvements=[],
     )
     moments = [
-        VisualMoment(0.0, 2.0, "hook.jpg", 1, 0.2, 120, 90, 0.02, None, "close-up", "Hook visual"),
-        VisualMoment(2.0, 8.0, "broll.jpg", 0, 0.0, 110, 80, 0.10, "Evidência", "sem rosto", "Tela de apoio ou evidência"),
-        VisualMoment(8.0, 10.0, "cta.jpg", 1, 0.1, 120, 90, 0.05, None, "plano médio", "Fechamento/CTA"),
+        VisualMoment(
+            0.0, 2.0, "hook.jpg", 1, 0.2, 120, 90, 0.02, None, "close-up", "Hook visual"
+        ),
+        VisualMoment(
+            2.0,
+            8.0,
+            "broll.jpg",
+            0,
+            0.0,
+            110,
+            80,
+            0.10,
+            "Evidência",
+            "sem rosto",
+            "Tela de apoio ou evidência",
+        ),
+        VisualMoment(
+            8.0,
+            10.0,
+            "cta.jpg",
+            1,
+            0.1,
+            120,
+            90,
+            0.05,
+            None,
+            "plano médio",
+            "Fechamento/CTA",
+        ),
     ]
     visual = VisualAnalysis(
         moments=moments,

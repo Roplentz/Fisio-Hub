@@ -59,9 +59,13 @@ def drive_status() -> DriveSyncResult:
     try:
         _build_service(credentials)
     except ImportError:
-        return DriveSyncResult("setup", "Dependências do Google Drive ainda não foram instaladas.")
+        return DriveSyncResult(
+            "setup", "Dependências do Google Drive ainda não foram instaladas."
+        )
     except Exception as exc:
-        return DriveSyncResult("offline", f"Credenciais do Drive inválidas: {exc}"[:300])
+        return DriveSyncResult(
+            "offline", f"Credenciais do Drive inválidas: {exc}"[:300]
+        )
     return DriveSyncResult("ready", "Google Drive configurado para backup automático.")
 
 
@@ -80,23 +84,44 @@ def sync_project_directory(project_dir: str | Path) -> DriveSyncResult:
         filename = f"virallab-projeto-{directory.name}.zip"
         data = _zip_directory(directory)
         existing_id = _find_file(service, folder_id, filename)
-        media = MediaIoBaseUpload(io.BytesIO(data), mimetype="application/zip", resumable=False)
+        media = MediaIoBaseUpload(
+            io.BytesIO(data), mimetype="application/zip", resumable=False
+        )
         if existing_id:
-            result = service.files().update(fileId=existing_id, media_body=media, fields="id").execute()
+            result = (
+                service.files()
+                .update(fileId=existing_id, media_body=media, fields="id")
+                .execute()
+            )
         else:
-            result = service.files().create(
-                body={"name": filename, "parents": [folder_id]},
-                media_body=media,
-                fields="id",
-            ).execute()
+            result = (
+                service.files()
+                .create(
+                    body={"name": filename, "parents": [folder_id]},
+                    media_body=media,
+                    fields="id",
+                )
+                .execute()
+            )
         now = datetime.now(timezone.utc).isoformat()
         _write_sync_metadata(directory, str(result.get("id", "")), now, "synced")
-        return DriveSyncResult("ready", "Projeto salvo automaticamente no Google Drive.", str(result.get("id", "")), now)
+        return DriveSyncResult(
+            "ready",
+            "Projeto salvo automaticamente no Google Drive.",
+            str(result.get("id", "")),
+            now,
+        )
     except ImportError:
-        return DriveSyncResult("setup", "Instale google-api-python-client e google-auth.")
+        return DriveSyncResult(
+            "setup", "Instale google-api-python-client e google-auth."
+        )
     except Exception as exc:
-        _write_sync_metadata(directory, "", datetime.now(timezone.utc).isoformat(), "error", str(exc))
-        return DriveSyncResult("error", f"Falha ao sincronizar com o Drive: {exc}"[:500])
+        _write_sync_metadata(
+            directory, "", datetime.now(timezone.utc).isoformat(), "error", str(exc)
+        )
+        return DriveSyncResult(
+            "error", f"Falha ao sincronizar com o Drive: {exc}"[:500]
+        )
 
 
 def autosync_project(project_dir: str | Path) -> DriveSyncResult:
@@ -116,7 +141,11 @@ def _build_service(credentials: dict[str, Any]):
 def _find_file(service: Any, folder_id: str, filename: str) -> str:
     escaped = filename.replace("'", "\\'")
     query = f"name = '{escaped}' and '{folder_id}' in parents and trashed = false"
-    result = service.files().list(q=query, spaces="drive", fields="files(id,name)", pageSize=10).execute()
+    result = (
+        service.files()
+        .list(q=query, spaces="drive", fields="files(id,name)", pageSize=10)
+        .execute()
+    )
     files = result.get("files", [])
     return str(files[0].get("id", "")) if files else ""
 
@@ -126,11 +155,16 @@ def _zip_directory(directory: Path) -> bytes:
     with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for path in directory.rglob("*"):
             if path.is_file() and path.name != "drive-sync.json":
-                archive.write(path, arcname=f"project-{directory.name}/{path.relative_to(directory)}")
+                archive.write(
+                    path,
+                    arcname=f"project-{directory.name}/{path.relative_to(directory)}",
+                )
     return buffer.getvalue()
 
 
-def _write_sync_metadata(directory: Path, file_id: str, synced_at: str, state: str, error: str = "") -> None:
+def _write_sync_metadata(
+    directory: Path, file_id: str, synced_at: str, state: str, error: str = ""
+) -> None:
     payload = {
         "version": "1.0",
         "state": state,
@@ -139,6 +173,8 @@ def _write_sync_metadata(directory: Path, file_id: str, synced_at: str, state: s
         "error": error[:500],
     }
     try:
-        (directory / "drive-sync.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        (directory / "drive-sync.json").write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
     except OSError:
         pass

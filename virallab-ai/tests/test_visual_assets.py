@@ -13,7 +13,9 @@ def test_find_image_payload_supports_interactions_shape():
         "steps": [
             {
                 "type": "model_output",
-                "content": [{"type": "image", "data": encoded, "mime_type": "image/png"}],
+                "content": [
+                    {"type": "image", "data": encoded, "mime_type": "image/png"}
+                ],
             }
         ]
     }
@@ -25,10 +27,14 @@ def test_find_image_payload_supports_interactions_shape():
 def test_approval_publishes_asset_and_updates_render_plan(tmp_path):
     render_plan = {
         "canvas": {"width": 1080, "height": 1920, "fps": 30},
-        "layers": [{"scene_index": 2, "source_type": "generated_card", "source": "old.png"}],
+        "layers": [
+            {"scene_index": 2, "source_type": "generated_card", "source": "old.png"}
+        ],
         "output": {"filename": "video-final.mp4"},
     }
-    (tmp_path / "render-plan.json").write_text(json.dumps(render_plan), encoding="utf-8")
+    (tmp_path / "render-plan.json").write_text(
+        json.dumps(render_plan), encoding="utf-8"
+    )
 
     library = AssetLibrary(tmp_path)
     record = library.add_bytes(

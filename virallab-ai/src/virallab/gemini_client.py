@@ -70,12 +70,16 @@ def generate_json(
 
                 if code == 404:
                     break
-                if code in RETRYABLE_HTTP_CODES and attempt + 1 < max(1, retries_per_model):
-                    time.sleep(min(2 ** attempt, 4))
+                if code in RETRYABLE_HTTP_CODES and attempt + 1 < max(
+                    1, retries_per_model
+                ):
+                    time.sleep(min(2**attempt, 4))
                     continue
                 break
 
-    raise GeminiAPIError(" | ".join(errors) or "Falha desconhecida ao consultar Gemini.")
+    raise GeminiAPIError(
+        " | ".join(errors) or "Falha desconhecida ao consultar Gemini."
+    )
 
 
 def _request_json(

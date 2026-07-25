@@ -104,7 +104,12 @@ def build_learning_profile(
         }
 
     scored = [(item, _learning_weight(item, theme)) for item in usable]
-    ranked = [item for item, _ in sorted(scored, key=lambda pair: pair[1], reverse=True)[:max_examples]]
+    ranked = [
+        item
+        for item, _ in sorted(scored, key=lambda pair: pair[1], reverse=True)[
+            :max_examples
+        ]
+    ]
 
     style_scores: Counter[str] = Counter()
     guidelines: list[str] = []
@@ -115,14 +120,20 @@ def build_learning_profile(
     for item in ranked:
         relevance, used_neural = _relevance(theme, str(item.get("theme", "")))
         neural_used = neural_used or used_neural
-        weight = max(1, round(_learning_weight(item, theme, relevance_override=relevance) * 10))
+        weight = max(
+            1, round(_learning_weight(item, theme, relevance_override=relevance) * 10)
+        )
         style = str(item.get("preferred_style", "")).strip()
         if style:
             style_scores[style] += weight
 
         preferred_hook = str(item.get("preferred_hook", "")).strip()
         original_hook = str(item.get("original_hook", "")).strip()
-        if preferred_hook and preferred_hook != original_hook and preferred_hook not in hooks:
+        if (
+            preferred_hook
+            and preferred_hook != original_hook
+            and preferred_hook not in hooks
+        ):
             hooks.append(preferred_hook)
 
         note = _clean_instruction(str(item.get("notes", "")))
@@ -162,7 +173,11 @@ def learning_prompt(profile: dict[str, Any]) -> str:
         lines.append("Regras aprendidas: " + " | ".join(guidelines) + ".")
     hooks = profile.get("preferred_hooks") or []
     if hooks:
-        lines.append("Padrões de hook aprovados, apenas para abstrair ritmo e intensidade: " + " | ".join(hooks) + ".")
+        lines.append(
+            "Padrões de hook aprovados, apenas para abstrair ritmo e intensidade: "
+            + " | ".join(hooks)
+            + "."
+        )
     return "\n".join(lines)
 
 
@@ -176,7 +191,11 @@ def _learning_weight(
 ) -> float:
     rating = max(1, min(10, int(item.get("rating", 0) or 1))) / 10
     approval = 1.0 if item.get("approved") else 0.65
-    relevance = relevance_override if relevance_override is not None else _relevance(theme, str(item.get("theme", "")))[0]
+    relevance = (
+        relevance_override
+        if relevance_override is not None
+        else _relevance(theme, str(item.get("theme", "")))[0]
+    )
     recency = _recency_score(str(item.get("created_at", "")))
     return rating * 0.45 + approval * 0.25 + relevance * 0.2 + recency * 0.1
 
@@ -199,8 +218,28 @@ def _text_similarity(left: str, right: str) -> float:
 
 
 def _tokens(value: str) -> list[str]:
-    stopwords = {"a", "o", "e", "de", "da", "do", "das", "dos", "em", "na", "no", "para", "com", "um", "uma"}
-    return [token for token in re.findall(r"[a-záàâãéêíóôõúç0-9]+", value.lower()) if token not in stopwords and len(token) > 2]
+    stopwords = {
+        "a",
+        "o",
+        "e",
+        "de",
+        "da",
+        "do",
+        "das",
+        "dos",
+        "em",
+        "na",
+        "no",
+        "para",
+        "com",
+        "um",
+        "uma",
+    }
+    return [
+        token
+        for token in re.findall(r"[a-záàâãéêíóôõúç0-9]+", value.lower())
+        if token not in stopwords and len(token) > 2
+    ]
 
 
 def _recency_score(value: str) -> float:
@@ -208,7 +247,9 @@ def _recency_score(value: str) -> float:
         return 0.5
     try:
         created = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        age_days = max(0, (datetime.now(timezone.utc) - created.astimezone(timezone.utc)).days)
+        age_days = max(
+            0, (datetime.now(timezone.utc) - created.astimezone(timezone.utc)).days
+        )
     except (ValueError, TypeError):
         return 0.5
     return max(0.1, 1.0 - min(age_days, 365) / 365)

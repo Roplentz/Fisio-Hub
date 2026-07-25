@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from virallab.learning import FeedbackRecord, load_feedback, save_feedback, summarize_preferences
+from virallab.learning import (
+    FeedbackRecord,
+    load_feedback,
+    save_feedback,
+    summarize_preferences,
+)
 
 
 def test_feedback_store_appends_and_summarizes(tmp_path):

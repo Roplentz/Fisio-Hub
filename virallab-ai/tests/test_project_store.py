@@ -26,7 +26,9 @@ def test_numbered_save_load_and_zip(tmp_path):
     store = ProjectStore(tmp_path / "projects")
     assert store.next_id() == "001"
 
-    saved = store.save("001", name="Primeiro", package=sample_package(), preferred_hook="Minha voz")
+    saved = store.save(
+        "001", name="Primeiro", package=sample_package(), preferred_hook="Minha voz"
+    )
     assert saved.project_id == "001"
     assert store.next_id() == "002"
 
