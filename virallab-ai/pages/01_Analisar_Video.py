@@ -16,7 +16,11 @@ from virallab.editorial_analyzer import analyze_editorially
 from virallab.generator import export_package, generate_video_package
 from virallab.models import VideoBrief
 from virallab.providers import select_provider
-from virallab.semantic_analyzer import SemanticAnalysisError, transcribe_video
+from virallab.semantic_analyzer import (
+    SemanticAnalysisError,
+    transcribe_video,
+    unavailable_semantic_analysis,
+)
 from virallab.timeline_builder import build_multimodal_timeline
 from virallab.video_analyzer import VideoAnalysisError, analyze_video
 from virallab.visual_analyzer import VisualAnalysisError, analyze_visuals
@@ -52,14 +56,14 @@ st.markdown(
     [data-testid="stMetric"] { background:linear-gradient(180deg,#132a38,#0b1c27); border:1px solid var(--line); border-radius:17px; padding:14px; }
     .stButton>button,.stDownloadButton>button { min-height:50px; border-radius:14px; font-weight:850; }
     .stButton>button[kind="primary"] { background:linear-gradient(135deg,var(--cyan),#188da0); color:#031014; border:none; }
-    @media(max-width:720px){.head{padding:22px}.head h1{font-size:32px}.block-container{padding-left:1rem;padding-right:1rem}}
+    @media(max-width:720px){.head{padding:22px}.head h1{font-size:32px}.block-container{padding-left:1rem;padding-right:1rem}[data-testid="column"]{min-width:100%!important}}
     </style>
     """,
     unsafe_allow_html=True,
 )
 
 st.markdown(
-    '<section class="head"><div class="kicker">Inteligência editorial e estratégica</div><h1>Entenda por que o conteúdo funciona — e onde ele perde força</h1><p>O ViralLab interpreta tese, promessa, atenção, retenção, persuasão, visual e CTA. Depois transforma a lógica em uma fórmula original.</p></section>',
+    '<section class="head"><div class="kicker">Inteligência editorial e estratégica</div><h1>Entenda por que o conteúdo funciona — e onde ele perde força</h1><p>O ViralLab interpreta estrutura, fala, atenção, retenção, visual e CTA. Se uma etapa falhar, as demais continuam e o relatório informa a limitação.</p></section>',
     unsafe_allow_html=True,
 )
 
@@ -97,6 +101,7 @@ if replace:
                 "visual_analysis",
                 "multimodal_timeline",
                 "editorial_analysis",
+                "analysis_warnings",
             ):
                 st.session_state.pop(item, None)
         else:
@@ -121,18 +126,43 @@ if video_path is not None and st.button(
     missing = [binary for binary in ("ffmpeg", "ffprobe") if shutil.which(binary) is None]
     if missing:
         st.error("O servidor ainda está concluindo a instalação do motor de vídeo.")
+        st.code("Ausente: " + ", ".join(missing))
     else:
+        warnings: list[str] = []
+        structural = None
+        semantic = None
+        visual = None
         try:
             with st.status("Interpretando o conteúdo...", expanded=True) as status:
+                st.write("1/4 · Lendo duração, formato, cortes e ritmo...")
                 structural = analyze_video(video_path, scene_threshold=threshold)
-                semantic = transcribe_video(video_path, model_size=model_size, language="pt")
+
+                st.write("2/4 · Transcrevendo a fala...")
+                try:
+                    semantic = transcribe_video(video_path, model_size=model_size, language="pt")
+                    if semantic.warning:
+                        warnings.append(semantic.warning)
+                except SemanticAnalysisError as exc:
+                    warnings.append(str(exc))
+                    semantic = unavailable_semantic_analysis(str(exc))
+                    st.warning("A fala não pôde ser transcrita. A análise continuará com estrutura e imagem.")
+
+                st.write("3/4 · Lendo frames, enquadramentos e mudanças visuais...")
                 frames_dir = ANALYSIS_DIR / f"{video_path.stem}-frames"
-                visual = analyze_visuals(
-                    video_path,
-                    output_dir=frames_dir,
-                    scene_threshold=threshold,
-                    max_moments=max_moments,
-                )
+                try:
+                    visual = analyze_visuals(
+                        video_path,
+                        output_dir=frames_dir,
+                        scene_threshold=threshold,
+                        max_moments=max_moments,
+                    )
+                except VisualAnalysisError as exc:
+                    warnings.append(str(exc))
+                    raise VisualAnalysisError(
+                        "A etapa visual é necessária para esta versão da análise e não pôde ser concluída: " + str(exc)
+                    ) from exc
+
+                st.write("4/4 · Cruzando narrativa, estrutura e visual...")
                 timeline = build_multimodal_timeline(semantic, visual)
                 editorial = analyze_editorially(structural, semantic, visual, timeline)
                 st.session_state.video_analysis = structural
@@ -140,25 +170,35 @@ if video_path is not None and st.button(
                 st.session_state.visual_analysis = visual
                 st.session_state.multimodal_timeline = timeline
                 st.session_state.editorial_analysis = editorial
+                st.session_state.analysis_warnings = warnings
                 st.session_state.analysis_source_name = pending_name or video_path.name
-                status.update(label="Análise editorial concluída", state="complete", expanded=False)
-        except (VideoAnalysisError, SemanticAnalysisError, VisualAnalysisError) as exc:
-            st.error("Não foi possível concluir esta análise.")
+                label = "Análise concluída" if not warnings else "Análise parcial concluída"
+                status.update(label=label, state="complete", expanded=False)
+        except (VideoAnalysisError, VisualAnalysisError) as exc:
+            st.error("Não foi possível concluir as etapas essenciais da análise.")
             st.code(str(exc))
         except Exception as exc:
             st.error("A leitura editorial não pôde ser concluída.")
-            st.code(str(exc))
+            st.code(f"{type(exc).__name__}: {exc}")
 
 analysis = st.session_state.get("video_analysis")
 semantic = st.session_state.get("semantic_analysis")
 visual = st.session_state.get("visual_analysis")
 timeline = st.session_state.get("multimodal_timeline")
 editorial = st.session_state.get("editorial_analysis")
+warnings = st.session_state.get("analysis_warnings", [])
 
 if analysis is not None and semantic is not None and visual is not None and editorial is not None:
     st.divider()
-    st.caption(f"Motor editorial: {editorial.engine}")
+    if warnings:
+        st.warning("Análise concluída com limitações. O diagnóstico visual e estrutural foi preservado.")
+        with st.expander("Ver detalhes técnicos"):
+            for warning in warnings:
+                st.code(warning)
+    elif getattr(semantic, "available", True):
+        st.success("Estrutura, fala e visual analisados com sucesso.")
 
+    st.caption(f"Motor editorial: {editorial.engine}")
     left, right = st.columns([0.34, 0.66], gap="large")
     with left:
         label = "Conteúdo forte" if editorial.content_score >= 80 else "Bom potencial"
@@ -217,6 +257,7 @@ if analysis is not None and semantic is not None and visual is not None and edit
     combined = {
         "source": st.session_state.get("analysis_source_name"),
         "source_url": pending_source if pending_source not in {"upload", None} else None,
+        "warnings": warnings,
         "editorial": editorial.to_dict(),
         "structural": analysis.to_dict(),
         "semantic": semantic.to_dict(),
@@ -238,6 +279,7 @@ if analysis is not None and semantic is not None and visual is not None and edit
         "legendas-virallab.srt",
         "application/x-subrip",
         use_container_width=True,
+        disabled=not bool(semantic.segments),
     )
 
     st.divider()
@@ -277,7 +319,7 @@ if analysis is not None and semantic is not None and visual is not None and edit
             st.session_state.package = package
             st.session_state.package_dir = str(output_dir)
             st.session_state.preferred_hook = package.hook
-            st.session_state.workspace_view = "Studio"
+            st.session_state.nav_view = "Studio"
             st.session_state.studio_flash = "Sua versão foi criada a partir da análise e está pronta para revisão."
             st.switch_page("app.py")
         except Exception as exc:
