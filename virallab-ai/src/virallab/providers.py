@@ -34,7 +34,12 @@ class LocalRuleProvider:
             "perguntar, avaliar e decidir.\n\n"
             f"{brief.cta}"
         )
-        return {"hook": hook, "thesis": thesis, "caption": caption}
+        return {
+            "hook": hook,
+            "thesis": thesis,
+            "caption": caption,
+            "provider_notice": "Versão local gerada porque o serviço de IA não estava disponível.",
+        }
 
 
 class GeminiProvider:
@@ -55,7 +60,7 @@ class GeminiProvider:
             data, used_model = generate_json(
                 _build_prompt(brief),
                 model=self.model,
-                temperature=0.55,
+                temperature=None,
                 timeout=90,
             )
         except GeminiAPIError as exc:
@@ -71,12 +76,38 @@ class GeminiProvider:
             "hook": str(data["hook"]).strip(),
             "thesis": str(data["thesis"]).strip(),
             "caption": str(data["caption"]).strip(),
+            "provider_model": used_model,
         }
         if isinstance(data.get("scenes"), list):
             result["scenes"] = data["scenes"]
         if isinstance(data.get("creative_rationale"), str):
             result["creative_rationale"] = data["creative_rationale"].strip()
         return result
+
+
+class AutoFallbackProvider:
+    """Prefer Gemini, but never block the creator when the service is unavailable."""
+
+    name = "auto"
+
+    def generate(self, brief: VideoBrief) -> dict[str, Any]:
+        if get_api_key():
+            try:
+                result = GeminiProvider().generate(brief)
+                self.name = f"gemini:{result.get('provider_model', configured_model())}"
+                return result
+            except (RuntimeError, ValueError) as exc:
+                result = LocalRuleProvider().generate(brief)
+                result["provider_notice"] = (
+                    "O serviço de IA está temporariamente indisponível. "
+                    "O ViralLab gerou uma versão local para você continuar trabalhando."
+                )
+                result["provider_error"] = str(exc)[:500]
+                self.name = "local_fallback"
+                return result
+
+        self.name = "local_rules"
+        return LocalRuleProvider().generate(brief)
 
 
 def _attach_session_reference_dna(brief: VideoBrief) -> None:
@@ -103,7 +134,6 @@ def _attach_session_reference_dna(brief: VideoBrief) -> None:
                 "narrative_structure": data.get("narrative_structure", []),
             }
     except Exception:
-        # Generation still works from a plain Python process or without an analysis.
         return
 
 
@@ -113,15 +143,9 @@ def select_provider(name: str = "auto") -> ScriptProvider:
         return LocalRuleProvider()
     if normalized == "gemini":
         return GeminiProvider()
-    if normalized != "auto":
-        raise ValueError(f"Provedor desconhecido: {name}")
-
-    if get_api_key():
-        try:
-            return GeminiProvider()
-        except ValueError:
-            pass
-    return LocalRuleProvider()
+    if normalized == "auto":
+        return AutoFallbackProvider()
+    raise ValueError(f"Provedor desconhecido: {name}")
 
 
 def _build_prompt(brief: VideoBrief) -> str:
