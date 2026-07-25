@@ -10,6 +10,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from .drive_sync import drive_status
 from .gemini_client import configured_model, get_api_key
 from .ollama_client import base_url
 
@@ -37,6 +38,9 @@ def collect_neural_status(workspace: str | Path) -> dict[str, Any]:
     models = ollama.pop("models", [])
     qwen_model = os.getenv("VIRALLAB_OLLAMA_MODEL", "qwen3:4b")
     embedding_model = os.getenv("VIRALLAB_EMBEDDING_MODEL", "bge-m3")
+    drive = drive_status()
+    whisper_installed = bool(importlib.util.find_spec("faster_whisper"))
+    ffmpeg_ready = bool(shutil.which("ffmpeg") and shutil.which("ffprobe"))
 
     services = [
         ServiceStatus(
@@ -63,9 +67,9 @@ def collect_neural_status(workspace: str | Path) -> dict[str, Any]:
         ServiceStatus(
             key="whisper",
             label="Whisper",
-            state="ready" if importlib.util.find_spec("faster_whisper") else "setup",
-            detail="Transcrição local disponível" if importlib.util.find_spec("faster_whisper") else "Dependência opcional não instalada",
-            action="Instale o extra semantic do projeto." if not importlib.util.find_spec("faster_whisper") else "",
+            state="ready" if whisper_installed and ffmpeg_ready else "setup",
+            detail="Transcrição local e diagnóstico de áudio disponíveis" if whisper_installed and ffmpeg_ready else "Whisper, FFmpeg ou FFprobe não disponível",
+            action="Instale faster-whisper, FFmpeg e FFprobe." if not (whisper_installed and ffmpeg_ready) else "",
         ),
         ServiceStatus(
             key="dna",
@@ -77,9 +81,16 @@ def collect_neural_status(workspace: str | Path) -> dict[str, Any]:
         ServiceStatus(
             key="render",
             label="Render",
-            state="ready" if shutil.which("ffmpeg") else "setup",
-            detail="FFmpeg disponível" if shutil.which("ffmpeg") else "FFmpeg não detectado",
-            action="Instale FFmpeg no ambiente de execução." if not shutil.which("ffmpeg") else "",
+            state="ready" if ffmpeg_ready else "setup",
+            detail="FFmpeg e FFprobe disponíveis" if ffmpeg_ready else "Motor de vídeo incompleto",
+            action="Instale FFmpeg e FFprobe no ambiente de execução." if not ffmpeg_ready else "",
+        ),
+        ServiceStatus(
+            key="drive",
+            label="Google Drive",
+            state=drive.state,
+            detail=drive.detail,
+            action="Adicione folder_id e service_account em [google_drive] nos Secrets." if drive.state == "setup" else "",
         ),
     ]
 
