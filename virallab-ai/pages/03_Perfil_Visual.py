@@ -47,23 +47,31 @@ profile = STORE.load()
 if profile:
     left, right = st.columns([0.42, 0.58], gap="large")
     with left:
-        st.image(profile.image_path, caption="Referência ativa", use_container_width=True)
+        st.image(
+            profile.image_path, caption="Referência ativa", use_container_width=True
+        )
     with right:
         st.success("Perfil visual ativo")
         st.markdown(f"### {profile.name}")
         st.write(profile.role)
         if profile.visual_notes:
             st.caption(profile.visual_notes)
-        st.info("As próximas imagens de avatar usarão esta fotografia como referência de identidade.")
+        st.info(
+            "As próximas imagens de avatar usarão esta fotografia como referência de identidade."
+        )
         if st.button("Remover perfil visual", use_container_width=True):
             STORE.delete()
             st.rerun()
     st.divider()
 
 st.subheader("Cadastrar ou substituir o autor")
-st.caption("Use uma foto frontal, nítida, bem iluminada e sem outras pessoas. A imagem é usada como referência, não como arquivo público.")
+st.caption(
+    "Use uma foto frontal, nítida, bem iluminada e sem outras pessoas. A imagem é usada como referência, não como arquivo público."
+)
 
-name = st.text_input("Nome do autor", value=profile.name if profile else "Prof. Dr. Rodrigo Plentz")
+name = st.text_input(
+    "Nome do autor", value=profile.name if profile else "Prof. Dr. Rodrigo Plentz"
+)
 role = st.selectbox(
     "Função visual",
     ["Autor do canal", "Especialista", "Professor", "Personagem recorrente", "Outro"],
@@ -71,7 +79,9 @@ role = st.selectbox(
 )
 notes = st.text_area(
     "Diretrizes permanentes",
-    value=profile.visual_notes if profile else "Fisioterapeuta e professor experiente; expressão segura e acolhedora; aparência natural; roupas profissionais contemporâneas.",
+    value=profile.visual_notes
+    if profile
+    else "Fisioterapeuta e professor experiente; expressão segura e acolhedora; aparência natural; roupas profissionais contemporâneas.",
     height=110,
 )
 uploaded = st.file_uploader("Foto de referência", type=["png", "jpg", "jpeg", "webp"])
@@ -94,7 +104,9 @@ if st.button(
             mime_type=uploaded.type or "image/jpeg",
             visual_notes=notes,
         )
-        st.success("Perfil visual salvo. Ele já será usado nas próximas cenas de avatar.")
+        st.success(
+            "Perfil visual salvo. Ele já será usado nas próximas cenas de avatar."
+        )
         st.rerun()
     except ValueError as exc:
         st.error(str(exc))
