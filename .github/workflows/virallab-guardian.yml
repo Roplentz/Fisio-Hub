@@ -1,0 +1,70 @@
+name: ViralLab Guardian
+
+on:
+  push:
+    paths:
+      - "virallab-ai/**"
+      - ".github/workflows/virallab-guardian.yml"
+  pull_request:
+    paths:
+      - "virallab-ai/**"
+      - ".github/workflows/virallab-guardian.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: virallab-guardian-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  guardian:
+    name: Syntax, lint, tests and smoke checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: virallab-ai
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            virallab-ai/requirements.txt
+            virallab-ai/pyproject.toml
+
+      - name: Install system tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Install Guardian dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install -e ".[test,drive]" ruff
+
+      - name: Compile all Python files
+        run: python -m compileall -q app.py pages src tests
+
+      - name: Ruff critical-error scan
+        run: ruff check app.py pages src tests --select E9,F63,F7,F82
+
+      - name: Run automated tests
+        run: pytest -q
+
+      - name: Import smoke test
+        run: |
+          python - <<'PY'
+          from virallab.asset_library import AssetLibrary
+          from virallab.creative_assets import build_scene_prompt
+          from virallab.project_store import ProjectStore
+          from virallab.semantic_analyzer import analyze_transcript
+          print("ViralLab Guardian: imports OK")
+          PY
