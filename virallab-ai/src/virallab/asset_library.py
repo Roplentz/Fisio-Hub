@@ -149,4 +149,24 @@ class AssetLibrary:
         assets_dir.mkdir(parents=True, exist_ok=True)
         target = assets_dir / f"visual-scene-{record.scene_index:02d}{source.suffix.lower()}"
         shutil.copy2(source, target)
+        self._sync_render_plan(record.scene_index, target)
         return target
+
+    def _sync_render_plan(self, scene_index: int, target: Path) -> None:
+        plan_path = self.project_dir / "render-plan.json"
+        if not plan_path.exists():
+            return
+        try:
+            plan = json.loads(plan_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            return
+        relative = str(target.relative_to(self.project_dir))
+        changed = False
+        for layer in plan.get("layers", []):
+            if int(layer.get("scene_index", -1)) == scene_index:
+                layer["source_type"] = "image_or_video"
+                layer["source"] = relative
+                changed = True
+                break
+        if changed:
+            plan_path.write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
