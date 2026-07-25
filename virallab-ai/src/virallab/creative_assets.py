@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from .asset_library import AssetLibrary, AssetRecord
+from .author_profile import AuthorProfile, AuthorProfileStore
 from .image_provider import GeminiImageProvider, ImageGenerationError
 
 
@@ -18,7 +19,11 @@ class SceneCreativePlan:
 
 
 def build_scene_prompt(
-    scene: Any, *, theme: str = "", visual_style: str = "RP cinematográfico"
+    scene: Any,
+    *,
+    theme: str = "",
+    visual_style: str = "RP cinematográfico",
+    author_profile: AuthorProfile | None = None,
 ) -> str:
     """Build a production-ready vertical-image prompt from a storyboard scene."""
     scene_type = str(getattr(scene, "scene_type", "broll"))
@@ -26,29 +31,41 @@ def build_scene_prompt(
     narration = str(getattr(scene, "narration", "")).strip()
     on_screen = str(getattr(scene, "on_screen_text", "")).strip()
 
-    type_rules = {
-        "avatar": (
-            "Retrato editorial realista de um professor fisioterapeuta brasileiro experiente, "
-            "em ambiente profissional de saúde, olhando para a câmera, expressão segura e acolhedora."
-        ),
-        "broll": (
-            "Fotografia documental realista de fisioterapia e cuidado em saúde, com interação humana natural, "
-            "sem poses publicitárias artificiais."
-        ),
-        "screen_capture": (
-            "Mockup vertical elegante de uma interface digital fictícia, limpa e legível, exibida em notebook ou tablet; "
-            "não reproduzir marcas, logotipos ou dados pessoais reais."
-        ),
-        "proof": (
-            "Composição visual de evidência ou demonstração profissional, clara e confiável, sem inventar números, "
-            "resultados clínicos ou selos de certificação."
-        ),
-        "title_card": (
-            "Arte editorial vertical minimalista de alto impacto, com área de respiro para inserir título posteriormente; "
-            "não renderizar palavras dentro da imagem."
-        ),
-    }
-    base = type_rules.get(scene_type, type_rules["broll"])
+    if scene_type == "avatar" and author_profile:
+        base = (
+            f"Use a imagem de referência como identidade visual de {author_profile.name}, "
+            f"{author_profile.role}. Preserve com alta fidelidade a identidade facial, formato do rosto, "
+            "cabelo, idade aparente, tom de pele e características individuais. Não crie outra pessoa. "
+            "Retrato editorial realista em ambiente profissional de saúde, olhando para a câmera, "
+            "expressão segura, humana e acolhedora."
+        )
+        if author_profile.visual_notes:
+            base += f" Diretrizes permanentes do autor: {author_profile.visual_notes}."
+    else:
+        type_rules = {
+            "avatar": (
+                "Retrato editorial realista de um professor fisioterapeuta brasileiro experiente, "
+                "em ambiente profissional de saúde, olhando para a câmera, expressão segura e acolhedora."
+            ),
+            "broll": (
+                "Fotografia documental realista de fisioterapia e cuidado em saúde, com interação humana natural, "
+                "sem poses publicitárias artificiais."
+            ),
+            "screen_capture": (
+                "Mockup vertical elegante de uma interface digital fictícia, limpa e legível, exibida em notebook ou tablet; "
+                "não reproduzir marcas, logotipos ou dados pessoais reais."
+            ),
+            "proof": (
+                "Composição visual de evidência ou demonstração profissional, clara e confiável, sem inventar números, "
+                "resultados clínicos ou selos de certificação."
+            ),
+            "title_card": (
+                "Arte editorial vertical minimalista de alto impacto, com área de respiro para inserir título posteriormente; "
+                "não renderizar palavras dentro da imagem."
+            ),
+        }
+        base = type_rules.get(scene_type, type_rules["broll"])
+
     prompt_parts = [
         base,
         f"Tema do conteúdo: {theme}." if theme else "",
@@ -72,11 +89,28 @@ def generate_scene_asset(
     aspect_ratio: str = "9:16",
     image_size: str = "1K",
 ) -> AssetRecord:
+    project_path = Path(project_dir)
     provider = GeminiImageProvider()
+    reference_image: bytes | None = None
+    reference_mime = "image/jpeg"
+    profile: AuthorProfile | None = None
+
+    if str(getattr(scene, "scene_type", "")) == "avatar":
+        workspace = project_path.parent.parent
+        store = AuthorProfileStore(workspace)
+        profile = store.load()
+        reference = store.reference()
+        if reference:
+            reference_image, reference_mime = reference
+
     generated = provider.generate(
-        prompt, aspect_ratio=aspect_ratio, image_size=image_size
+        prompt,
+        aspect_ratio=aspect_ratio,
+        image_size=image_size,
+        reference_image=reference_image,
+        reference_mime_type=reference_mime,
     )
-    library = AssetLibrary(project_dir)
+    library = AssetLibrary(project_path)
     return library.add_bytes(
         scene_index=int(getattr(scene, "index")),
         data=generated.data,
@@ -89,6 +123,8 @@ def generate_scene_asset(
             "aspect_ratio": aspect_ratio,
             "image_size": image_size,
             "scene_type": str(getattr(scene, "scene_type", "")),
+            "author_reference": bool(reference_image),
+            "author_name": profile.name if profile else "",
         },
     )
 
