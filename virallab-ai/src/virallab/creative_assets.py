@@ -32,15 +32,7 @@ def build_scene_prompt(
     on_screen = str(getattr(scene, "on_screen_text", "")).strip()
 
     if scene_type == "avatar" and author_profile:
-        base = (
-            f"Use a imagem de referência como identidade visual de {author_profile.name}, "
-            f"{author_profile.role}. Preserve com alta fidelidade a identidade facial, formato do rosto, "
-            "cabelo, idade aparente, tom de pele e características individuais. Não crie outra pessoa. "
-            "Retrato editorial realista em ambiente profissional de saúde, olhando para a câmera, "
-            "expressão segura, humana e acolhedora."
-        )
-        if author_profile.visual_notes:
-            base += f" Diretrizes permanentes do autor: {author_profile.visual_notes}."
+        base = _author_identity_instruction(author_profile)
     else:
         type_rules = {
             "avatar": (
@@ -81,6 +73,19 @@ def build_scene_prompt(
     return " ".join(part for part in prompt_parts if part).strip()
 
 
+def _author_identity_instruction(profile: AuthorProfile) -> str:
+    instruction = (
+        f"Use a imagem de referência como identidade visual de {profile.name}, "
+        f"{profile.role}. Preserve com alta fidelidade a identidade facial, formato do rosto, "
+        "cabelo, idade aparente, tom de pele e características individuais. Não crie outra pessoa. "
+        "Retrato editorial realista em ambiente profissional de saúde, olhando para a câmera, "
+        "expressão segura, humana e acolhedora."
+    )
+    if profile.visual_notes:
+        instruction += f" Diretrizes permanentes do autor: {profile.visual_notes}."
+    return instruction
+
+
 def generate_scene_asset(
     project_dir: str | Path,
     scene: Any,
@@ -94,6 +99,7 @@ def generate_scene_asset(
     reference_image: bytes | None = None
     reference_mime = "image/jpeg"
     profile: AuthorProfile | None = None
+    final_prompt = prompt
 
     if str(getattr(scene, "scene_type", "")) == "avatar":
         workspace = project_path.parent.parent
@@ -102,9 +108,12 @@ def generate_scene_asset(
         reference = store.reference()
         if reference:
             reference_image, reference_mime = reference
+            identity = _author_identity_instruction(profile)
+            if identity not in final_prompt:
+                final_prompt = f"{identity} {final_prompt}"
 
     generated = provider.generate(
-        prompt,
+        final_prompt,
         aspect_ratio=aspect_ratio,
         image_size=image_size,
         reference_image=reference_image,
@@ -117,7 +126,7 @@ def generate_scene_asset(
         extension=generated.extension,
         source="generated",
         provider=provider.name,
-        prompt=prompt,
+        prompt=final_prompt,
         metadata={
             "model": generated.model,
             "aspect_ratio": aspect_ratio,
