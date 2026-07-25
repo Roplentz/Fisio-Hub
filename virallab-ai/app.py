@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 import json
 import shutil
 import uuid
@@ -7,6 +8,8 @@ from pathlib import Path
 
 import streamlit as st
 
+from virallab.asset_library import AssetLibrary
+from virallab.creative_assets import ImageGenerationError, build_scene_prompt, generate_scene_asset
 from virallab.generator import export_package, generate_video_package
 from virallab.learning import FeedbackRecord, load_feedback, save_feedback, summarize_preferences
 from virallab.models import VideoBrief
@@ -44,7 +47,7 @@ st.markdown(
     .hero h1 { color:white; font-size:44px; letter-spacing:-2px; margin:.4rem 0; max-width:850px; }
     .hero p { color:#b3c4ce; font-size:16px; max-width:760px; margin:0; }
     .kicker { color:var(--cyan); font-size:11px; font-weight:900; letter-spacing:.14em; text-transform:uppercase; }
-    .action-card,.scene-card { padding:20px; border-radius:20px; border:1px solid var(--line); background:linear-gradient(180deg,rgba(19,42,56,.95),rgba(11,27,38,.95)); margin-bottom:12px; }
+    .action-card,.scene-card,.creative-card { padding:20px; border-radius:20px; border:1px solid var(--line); background:linear-gradient(180deg,rgba(19,42,56,.95),rgba(11,27,38,.95)); margin-bottom:12px; }
     .action-card h3 { color:white; font-size:24px; margin:.5rem 0; }
     .action-card p,.muted { color:var(--muted); }
     .section-title { color:white; font-size:22px; font-weight:900; margin:8px 0 3px; }
@@ -52,6 +55,7 @@ st.markdown(
     .scene-head { display:flex; justify-content:space-between; gap:10px; color:white; font-weight:800; }
     .scene-label { margin-top:10px; color:var(--muted); font-size:10px; font-weight:800; text-transform:uppercase; }
     .scene-text { color:#d8e5ea; font-size:13px; margin-top:3px; }
+    .creative-status { display:inline-block; padding:5px 9px; border-radius:999px; background:rgba(69,214,220,.10); color:var(--cyan); font-size:11px; font-weight:800; }
     .stButton>button,.stDownloadButton>button { min-height:48px; border-radius:13px; font-weight:800; }
     .footer { text-align:center; color:#607784; font-size:11px; margin-top:35px; }
     @media(max-width:720px){
@@ -63,7 +67,7 @@ st.markdown(
       .stTabs [data-baseweb="tab-list"]{gap:4px;overflow-x:auto}
       .stTabs [data-baseweb="tab"]{padding:0 10px;white-space:nowrap}
       .stButton>button,.stDownloadButton>button{min-height:52px}
-      .action-card,.scene-card{padding:15px;border-radius:16px}
+      .action-card,.scene-card,.creative-card{padding:15px;border-radius:16px}
     }
     </style>
     """,
@@ -130,13 +134,110 @@ def render_scene_cards(package) -> None:
             f"""
             <div class="scene-card">
               <div class="scene-head"><span>Cena {scene.index} · {names.get(scene.scene_type, scene.scene_type)}</span><span>{scene.start:.1f}–{scene.end:.1f}s</span></div>
-              <div class="scene-label">Narração</div><div class="scene-text">{scene.narration or '—'}</div>
-              <div class="scene-label">Texto na tela</div><div class="scene-text">{scene.on_screen_text or '—'}</div>
-              <div class="scene-label">Direção visual</div><div class="scene-text">{scene.visual_direction or '—'}</div>
+              <div class="scene-label">Narração</div><div class="scene-text">{html.escape(scene.narration or '—')}</div>
+              <div class="scene-label">Texto na tela</div><div class="scene-text">{html.escape(scene.on_screen_text or '—')}</div>
+              <div class="scene-label">Direção visual</div><div class="scene-text">{html.escape(scene.visual_direction or '—')}</div>
             </div>
             """,
             unsafe_allow_html=True,
         )
+
+
+def render_creative_studio(package, package_path: Path) -> None:
+    library = AssetLibrary(package_path)
+    all_records = library.load()
+    approved_count = len([item for item in all_records if item.status == "approved"])
+
+    st.markdown('<div class="section-title">Criativos por cena</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-sub">Gere imagens intermediárias a partir do storyboard, aprove a melhor versão ou envie um material próprio.</div>',
+        unsafe_allow_html=True,
+    )
+    c1, c2 = st.columns(2)
+    c1.metric("Cenas", len(package.scenes))
+    c2.metric("Aprovadas", f"{approved_count}/{len(package.scenes)}")
+
+    visual_style = st.selectbox(
+        "Identidade visual",
+        ["RP cinematográfico", "Clínico premium", "Editorial científico", "Humano documental", "Minimalista tecnológico"],
+        help="A identidade escolhida orienta os prompts de todas as cenas.",
+    )
+
+    for scene in package.scenes:
+        scene_records = library.for_scene(scene.index)
+        approved = next((item for item in scene_records if item.status == "approved"), None)
+        default_prompt = build_scene_prompt(scene, theme=package.brief.theme, visual_style=visual_style)
+
+        with st.container(border=True):
+            status = "✓ Criativo aprovado" if approved else "Aguardando criativo"
+            st.markdown(
+                f'<div class="scene-head"><span>Cena {scene.index} · {html.escape(scene.on_screen_text or scene.scene_type)}</span><span class="creative-status">{status}</span></div>',
+                unsafe_allow_html=True,
+            )
+            st.caption(scene.visual_direction or scene.narration)
+
+            prompt_key = f"creative-prompt-{st.session_state.project_id}-{scene.index}"
+            prompt = st.text_area("Prompt da imagem", value=default_prompt, height=150, key=prompt_key)
+            generate_col, upload_col = st.columns(2)
+            with generate_col:
+                if st.button("🎨 Gerar imagem", key=f"generate-creative-{scene.index}", type="primary", use_container_width=True):
+                    try:
+                        with st.spinner(f"Criando imagem da cena {scene.index}..."):
+                            generate_scene_asset(package_path, scene, prompt=prompt)
+                        st.success("Imagem criada. Escolha e aprove abaixo.")
+                        st.rerun()
+                    except (ImageGenerationError, ValueError) as exc:
+                        st.error(str(exc))
+            with upload_col:
+                upload = st.file_uploader(
+                    "Enviar imagem ou vídeo próprio",
+                    type=["mp4", "mov", "webm", "png", "jpg", "jpeg", "webp"],
+                    key=f"creative-upload-{scene.index}",
+                    label_visibility="collapsed",
+                )
+                if upload is not None and st.button("Salvar upload", key=f"save-upload-{scene.index}", use_container_width=True):
+                    record = library.add_bytes(
+                        scene_index=scene.index,
+                        data=upload.getvalue(),
+                        extension=Path(upload.name).suffix or ".png",
+                        source="upload",
+                        provider="human",
+                        prompt=prompt,
+                        metadata={"original_name": upload.name},
+                    )
+                    library.set_status(record.id, "approved")
+                    st.success("Material enviado e aprovado para a cena.")
+                    st.rerun()
+
+            scene_records = library.for_scene(scene.index)
+            if not scene_records:
+                st.info("Ainda não há imagens nesta cena. Gere uma arte ou envie um arquivo próprio.")
+                continue
+
+            st.markdown("**Variações disponíveis**")
+            for record in reversed(scene_records):
+                path = library.resolve(record)
+                with st.container(border=True):
+                    if path.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"}:
+                        st.image(str(path), use_container_width=True)
+                    elif path.suffix.lower() in {".mp4", ".mov", ".webm"}:
+                        st.video(str(path))
+                    st.caption(f"{record.source} · {record.provider} · {record.status}")
+                    a, b, c = st.columns(3)
+                    if a.button("⭐ Aprovar", key=f"approve-{record.id}", use_container_width=True, disabled=record.status == "approved"):
+                        library.set_status(record.id, "approved")
+                        st.rerun()
+                    if b.button("Rejeitar", key=f"reject-{record.id}", use_container_width=True, disabled=record.status == "rejected"):
+                        library.set_status(record.id, "rejected")
+                        st.rerun()
+                    c.download_button(
+                        "Baixar",
+                        path.read_bytes(),
+                        file_name=path.name,
+                        mime="application/octet-stream",
+                        key=f"download-{record.id}",
+                        use_container_width=True,
+                    )
 
 
 initialize_state()
@@ -145,12 +246,7 @@ summary = summarize_preferences(records)
 
 with st.sidebar:
     st.markdown('<div class="brand"><div class="mark">RP</div><div><div class="brand-title">ViralLab Studio</div><div class="brand-sub">Engenharia de conteúdo</div></div></div>', unsafe_allow_html=True)
-    view = st.radio(
-        "Navegação",
-        ["Início", "Studio", "DNA RP"],
-        key="nav_view",
-        label_visibility="collapsed",
-    )
+    view = st.radio("Navegação", ["Início", "Studio", "DNA RP"], key="nav_view", label_visibility="collapsed")
     if st.button("🧠 Painel Neural", use_container_width=True):
         st.switch_page("pages/04_Painel_Neural.py")
     st.divider()
@@ -164,7 +260,7 @@ with st.sidebar:
     c2.metric("Aprovação", f"{summary['approval_rate']}%")
 
 if view == "Início":
-    st.markdown('<section class="hero"><div class="kicker">Engenharia reversa de conteúdo com IA</div><h1>Descubra por que um vídeo funciona. Depois, crie a sua versão original.</h1><p>Analise referências ou crie conteúdos autorais com roteiro, storyboard, assets e aprendizado contínuo.</p></section>', unsafe_allow_html=True)
+    st.markdown('<section class="hero"><div class="kicker">Engenharia reversa de conteúdo com IA</div><h1>Descubra por que um vídeo funciona. Depois, crie a sua versão original.</h1><p>Analise referências ou crie conteúdos autorais com roteiro, storyboard, criativos, vídeo e aprendizado contínuo.</p></section>', unsafe_allow_html=True)
     left, right = st.columns([1.25, .75], gap="large")
     with left:
         st.markdown('<div class="section-title">Analisar vídeo</div><div class="section-sub">Envie um arquivo ou cole uma URL pública.</div>', unsafe_allow_html=True)
@@ -190,8 +286,8 @@ if view == "Início":
         st.button("✨ Criar conteúdo do zero", use_container_width=True, on_click=go_to_studio)
 
 elif view == "Studio":
-    st.markdown('<section class="hero"><div class="kicker">Criação orientada por estratégia</div><h1>Studio de conteúdo</h1><p>Crie, revise, produza e renderize vídeos verticais.</p></section>', unsafe_allow_html=True)
-    brief_tab, script_tab, assets_tab, render_tab = st.tabs(["01 Estratégia", "02 Roteiro", "03 Produção", "04 Render"])
+    st.markdown('<section class="hero"><div class="kicker">Criação orientada por estratégia</div><h1>Studio de conteúdo</h1><p>Crie, revise, gere os criativos e renderize vídeos verticais.</p></section>', unsafe_allow_html=True)
+    brief_tab, script_tab, assets_tab, render_tab = st.tabs(["01 Estratégia", "02 Roteiro", "03 Criativos", "04 Render"])
 
     with brief_tab:
         left, right = st.columns(2, gap="large")
@@ -216,7 +312,7 @@ elif view == "Studio":
                 st.session_state.package = package
                 st.session_state.package_dir = str(out)
                 st.session_state.preferred_hook = package.hook
-                st.success("Roteiro criado. Abra a aba 02 para revisar.")
+                st.success("Roteiro criado. Abra a aba 02 para revisar e a aba 03 para gerar as artes.")
             except Exception as exc:
                 st.error(f"Não foi possível gerar o pacote: {exc}")
 
@@ -236,23 +332,20 @@ elif view == "Studio":
         package = st.session_state.package
         package_path = Path(st.session_state.package_dir) if st.session_state.package_dir else None
         if package is None or package_path is None:
-            st.warning("Gere um roteiro antes de iniciar a produção.")
+            st.warning("Gere um roteiro antes de criar as artes.")
         else:
-            assets_dir = package_path / "assets"
-            assets_dir.mkdir(parents=True, exist_ok=True)
-            for scene in package.scenes:
-                with st.container(border=True):
-                    st.markdown(f"**Cena {scene.index}**")
-                    upload = st.file_uploader("Enviar asset", type=["mp4", "mov", "webm", "png", "jpg", "jpeg", "webp"], key=f"asset-{scene.index}")
-                    if upload is not None:
-                        saved = save_uploaded_file(upload, assets_dir / upload.name)
-                        st.success(f"Salvo: {saved.name}")
+            render_creative_studio(package, package_path)
 
     with render_tab:
         package_path = Path(st.session_state.package_dir) if st.session_state.package_dir else None
         if package_path is None:
             st.warning("Crie um projeto antes de renderizar.")
         else:
+            library = AssetLibrary(package_path)
+            approved = [item for item in library.load() if item.status == "approved"]
+            st.metric("Criativos aprovados", len(approved))
+            if not approved:
+                st.warning("Aprove pelo menos um criativo na aba 03 antes de renderizar.")
             burn_captions = st.checkbox("Legendas incorporadas", value=True)
             music_level = st.slider("Trilha (dB)", -40, -12, -25)
             dry_run = st.checkbox("Simular sem MP4", value=False)
