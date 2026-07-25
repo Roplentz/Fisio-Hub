@@ -71,7 +71,9 @@ def render_video_with_voice(
     ]
     completed = subprocess.run(command, capture_output=True, text=True, check=False)
     if completed.returncode != 0:
-        raise RenderError(f"Falha ao aplicar a narração.\n{completed.stderr.strip()[-3000:]}")
+        raise RenderError(
+            f"Falha ao aplicar a narração.\n{completed.stderr.strip()[-3000:]}"
+        )
     return target
 
 

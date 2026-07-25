@@ -52,7 +52,12 @@ def save_narration(
         existing.unlink(missing_ok=True)
     target.write_bytes(data)
     duration = probe_duration(target, ffprobe_bin=ffprobe_bin)
-    plan = VoicePlan(audio_file=str(target.relative_to(root)), duration=duration, mode="full", scenes=[])
+    plan = VoicePlan(
+        audio_file=str(target.relative_to(root)),
+        duration=duration,
+        mode="full",
+        scenes=[],
+    )
     save_voice_plan(root, plan)
     return plan
 
@@ -79,7 +84,9 @@ def probe_duration(path: str | Path, *, ffprobe_bin: str = "ffprobe") -> float:
         check=False,
     )
     if completed.returncode != 0:
-        raise VoiceError(completed.stderr.strip()[-1000:] or "Não foi possível medir o áudio.")
+        raise VoiceError(
+            completed.stderr.strip()[-1000:] or "Não foi possível medir o áudio."
+        )
     try:
         return max(0.0, float(completed.stdout.strip()))
     except ValueError as exc:
@@ -118,7 +125,9 @@ def align_scenes_by_script(
 
 def save_voice_plan(project_dir: str | Path, plan: VoicePlan) -> Path:
     target = Path(project_dir) / "voice-plan.json"
-    target.write_text(json.dumps(plan.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
+    target.write_text(
+        json.dumps(plan.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     return target
 
 
