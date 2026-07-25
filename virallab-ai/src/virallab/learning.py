@@ -9,6 +9,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .ollama_client import semantic_similarity
+
 
 @dataclass
 class FeedbackRecord:
@@ -86,33 +88,34 @@ def build_learning_profile(
 ) -> dict[str, Any]:
     """Consolida feedbacks em um perfil editorial auditável e reversível.
 
-    O mecanismo não treina um modelo ocultamente. Ele seleciona exemplos aprovados,
-    resume preferências e injeta esse contexto na próxima geração.
+    Quando o Ollama está configurado, BGE-M3 calcula similaridade semântica entre
+    o novo tema e os aprendizados. Sem Ollama, o sistema mantém o ranking lexical.
     """
     usable = [item for item in records if _is_learning_signal(item)]
     if not usable:
         return {
-            "version": "1.0",
+            "version": "1.1",
             "examples_used": 0,
             "preferred_styles": [],
             "preferred_hooks": [],
             "guidelines": [],
             "source_project_ids": [],
+            "retrieval_mode": "lexical",
         }
 
-    ranked = sorted(
-        usable,
-        key=lambda item: _learning_weight(item, theme),
-        reverse=True,
-    )[:max_examples]
+    scored = [(item, _learning_weight(item, theme)) for item in usable]
+    ranked = [item for item, _ in sorted(scored, key=lambda pair: pair[1], reverse=True)[:max_examples]]
 
     style_scores: Counter[str] = Counter()
     guidelines: list[str] = []
     hooks: list[str] = []
     source_ids: list[str] = []
+    neural_used = False
 
     for item in ranked:
-        weight = max(1, round(_learning_weight(item, theme) * 10))
+        relevance, used_neural = _relevance(theme, str(item.get("theme", "")))
+        neural_used = neural_used or used_neural
+        weight = max(1, round(_learning_weight(item, theme, relevance_override=relevance) * 10))
         style = str(item.get("preferred_style", "")).strip()
         if style:
             style_scores[style] += weight
@@ -131,12 +134,13 @@ def build_learning_profile(
             source_ids.append(project_id)
 
     return {
-        "version": "1.0",
+        "version": "1.1",
         "examples_used": len(ranked),
         "preferred_styles": [name for name, _ in style_scores.most_common(3)],
         "preferred_hooks": hooks[:3],
         "guidelines": guidelines[:6],
         "source_project_ids": source_ids,
+        "retrieval_mode": "bge-m3" if neural_used else "lexical",
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -148,6 +152,7 @@ def learning_prompt(profile: dict[str, Any]) -> str:
 
     lines = [
         f"Use {profile['examples_used']} exemplos editoriais aprovados como referência de estilo, nunca como texto para copiar.",
+        f"Recuperação de memória: {profile.get('retrieval_mode', 'lexical')}.",
     ]
     styles = profile.get("preferred_styles") or []
     if styles:
@@ -166,12 +171,23 @@ def _is_learning_signal(item: dict[str, Any]) -> bool:
     return bool(item.get("approved")) or rating >= 8
 
 
-def _learning_weight(item: dict[str, Any], theme: str) -> float:
+def _learning_weight(
+    item: dict[str, Any], theme: str, *, relevance_override: float | None = None
+) -> float:
     rating = max(1, min(10, int(item.get("rating", 0) or 1))) / 10
     approval = 1.0 if item.get("approved") else 0.65
-    relevance = _text_similarity(theme, str(item.get("theme", ""))) if theme else 0.5
+    relevance = relevance_override if relevance_override is not None else _relevance(theme, str(item.get("theme", "")))[0]
     recency = _recency_score(str(item.get("created_at", "")))
     return rating * 0.45 + approval * 0.25 + relevance * 0.2 + recency * 0.1
+
+
+def _relevance(left: str, right: str) -> tuple[float, bool]:
+    if not left:
+        return 0.5, False
+    neural = semantic_similarity(left, right)
+    if neural is not None:
+        return neural, True
+    return _text_similarity(left, right), False
 
 
 def _text_similarity(left: str, right: str) -> float:
