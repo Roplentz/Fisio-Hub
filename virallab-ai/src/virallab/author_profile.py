@@ -35,7 +35,9 @@ class AuthorProfileStore:
         mime_type: str,
         visual_notes: str = "",
     ) -> AuthorProfile:
-        suffix = extension.lower() if extension.startswith(".") else f".{extension.lower()}"
+        suffix = (
+            extension.lower() if extension.startswith(".") else f".{extension.lower()}"
+        )
         if suffix not in {".png", ".jpg", ".jpeg", ".webp"}:
             raise ValueError("Use uma imagem PNG, JPG, JPEG ou WEBP.")
         if not image_bytes:
@@ -53,7 +55,8 @@ class AuthorProfileStore:
             visual_notes=visual_notes.strip(),
         )
         self.metadata_path.write_text(
-            json.dumps(profile.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8"
+            json.dumps(profile.to_dict(), ensure_ascii=False, indent=2),
+            encoding="utf-8",
         )
         return profile
 
