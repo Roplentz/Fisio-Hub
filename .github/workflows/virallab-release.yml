@@ -1,0 +1,65 @@
+name: ViralLab Release Gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: "Branch or commit to validate and promote"
+        required: true
+        default: "main"
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: virallab-ai
+    steps:
+      - name: Checkout requested source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install validation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test,ui,semantic,visual,web,drive]" ruff
+
+      - name: Compile Python files
+        run: python -m compileall -q app.py pages src tests
+
+      - name: Ruff critical checks
+        run: ruff check app.py pages src tests --select E9,F63,F7,F82
+
+      - name: Run tests
+        run: pytest -q
+
+      - name: Import smoke test
+        run: |
+          python - <<'PY'
+          import virallab.asset_library
+          import virallab.creative_assets
+          import virallab.drive_storage
+          import virallab.learning
+          import virallab.neural_status
+          import virallab.project_store
+          import virallab.providers
+          import virallab.semantic_analyzer
+          print("ViralLab imports OK")
+          PY
+
+      - name: Promote validated commit to production branch
+        run: |
+          git config user.name "ViralLab Guardian"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin production || true
+          git push origin HEAD:production --force-with-lease
