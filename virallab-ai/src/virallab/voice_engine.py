@@ -50,6 +50,55 @@ class VoiceProvider(Protocol):
     ) -> None: ...
 
 
+def _language_code(settings: VoiceSettings) -> str:
+    return "p" if settings.language.lower().startswith("pt") else "a"
+
+
+def _validate_voice_for_language(voice: str, lang_code: str) -> None:
+    prefix = voice.strip().lower()[:1]
+    if lang_code == "p" and prefix != "p":
+        raise VoiceError(
+            "A voz selecionada não é compatível com português. "
+            "Use uma voz iniciada por 'pf_' ou 'pm_'."
+        )
+    if lang_code == "a" and prefix not in {"a", "b"}:
+        raise VoiceError(
+            "A voz selecionada não é compatível com inglês. "
+            "Use uma voz iniciada por 'af_', 'am_', 'bf_' ou 'bm_'."
+        )
+
+
+def _ensure_kokoro_model_device(pipeline: Any) -> Any:
+    """Garante o atributo usado internamente pelo Kokoro em algumas versões.
+
+    Determinadas combinações de Kokoro e PyTorch criam um ``KModel`` sem o
+    atributo ``device``. O próprio ``KPipeline`` tenta acessar esse atributo ao
+    carregar a voz e termina com ``AttributeError``. A correção é local à
+    instância e não altera classes ou módulos globais.
+    """
+
+    model = getattr(pipeline, "model", None)
+    if model is None or hasattr(model, "device"):
+        return pipeline
+
+    device: Any = "cpu"
+    parameters = getattr(model, "parameters", None)
+    if callable(parameters):
+        try:
+            device = next(parameters()).device
+        except (StopIteration, AttributeError, TypeError):
+            device = "cpu"
+
+    try:
+        setattr(model, "device", device)
+    except (AttributeError, TypeError) as exc:
+        raise VoiceError(
+            "O modelo de voz foi carregado, mas o dispositivo de execução "
+            "não pôde ser configurado."
+        ) from exc
+    return pipeline
+
+
 class KokoroProvider:
     name = "kokoro"
 
@@ -59,14 +108,34 @@ class KokoroProvider:
             from kokoro import KPipeline
         except ImportError as exc:
             raise VoiceError(
-                "O Kokoro ainda não está instalado. Instale o extra de voz: pip install -e '.[voice]'."
+                "O Kokoro ainda não está instalado. Instale o extra de voz: "
+                "pip install -e '.[voice]'."
             ) from exc
 
-        lang_code = "p" if settings.language.lower().startswith("pt") else "a"
-        pipeline = KPipeline(lang_code=lang_code)
-        chunks: list[Any] = []
-        for _, _, audio in pipeline(text, voice=settings.voice, speed=settings.speed):
-            chunks.append(audio)
+        lang_code = _language_code(settings)
+        _validate_voice_for_language(settings.voice, lang_code)
+
+        try:
+            pipeline = _ensure_kokoro_model_device(KPipeline(lang_code=lang_code))
+            chunks: list[Any] = []
+            for _, _, audio in pipeline(
+                text,
+                voice=settings.voice,
+                speed=settings.speed,
+                split_pattern=r"\n+",
+            ):
+                if audio is not None:
+                    chunks.append(audio)
+        except VoiceError:
+            raise
+        except AttributeError as exc:
+            raise VoiceError(
+                "O mecanismo Kokoro é incompatível com a versão atual do "
+                "ambiente. Reinicie o aplicativo após a atualização."
+            ) from exc
+        except Exception as exc:
+            raise VoiceError(f"Não foi possível gerar a voz com Kokoro: {exc}") from exc
+
         if not chunks:
             raise VoiceError("O Kokoro não retornou áudio.")
 
@@ -78,7 +147,10 @@ class KokoroProvider:
             ) from exc
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        sf.write(output_path, np.concatenate(chunks), 24000)
+        try:
+            sf.write(output_path, np.concatenate(chunks), 24000)
+        except Exception as exc:
+            raise VoiceError(f"Não foi possível salvar o áudio gerado: {exc}") from exc
 
 
 class VoiceEngine:
@@ -128,6 +200,9 @@ class VoiceEngine:
         cache_hit = cached.exists()
         if not cache_hit:
             self.providers[provider].generate(text, cached, selected)
+        if not cached.is_file() or cached.stat().st_size < 1024:
+            cached.unlink(missing_ok=True)
+            raise VoiceError("O provedor de voz não produziu um arquivo de áudio válido.")
 
         narration = root / "assets" / "narration.wav"
         narration.parent.mkdir(parents=True, exist_ok=True)
