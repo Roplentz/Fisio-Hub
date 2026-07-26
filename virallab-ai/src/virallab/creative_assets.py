@@ -5,8 +5,8 @@ from pathlib import Path
 from typing import Any
 
 from .asset_library import AssetLibrary, AssetRecord
-from .avatar_master import AvatarMasterProfile, AvatarMasterStore, avatar_prompt
 from .author_profile import AuthorProfile, AuthorProfileStore
+from .avatar_master import AvatarMasterProfile, AvatarMasterStore, avatar_prompt
 from .image_provider import GeminiImageProvider, ImageGenerationError
 
 
@@ -153,7 +153,9 @@ def generate_scene_asset(
             "author_name": (
                 avatar_profile.name
                 if avatar_profile
-                else legacy_profile.name if legacy_profile else ""
+                else legacy_profile.name
+                if legacy_profile
+                else ""
             ),
         },
     )

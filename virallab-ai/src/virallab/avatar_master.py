@@ -64,7 +64,9 @@ class AvatarMasterStore:
             raise ValueError("Confirme a autorização de uso da própria imagem.")
         missing = [angle for angle in self.ANGLES if angle not in photos]
         if missing:
-            raise ValueError("Envie as três fotos: frente, lado esquerdo e lado direito.")
+            raise ValueError(
+                "Envie as três fotos: frente, lado esquerdo e lado direito."
+            )
 
         previous = self.load()
         references: list[ReferencePhoto] = []
@@ -130,16 +132,21 @@ class AvatarMasterStore:
         if include_master and profile.approved and profile.master_image_path:
             master = Path(profile.master_image_path)
             if master.exists():
-                result.append((master.read_bytes(), profile.master_mime_type or "image/png"))
+                result.append(
+                    (master.read_bytes(), profile.master_mime_type or "image/png")
+                )
         result.extend(
-            (Path(item.path).read_bytes(), item.mime_type) for item in profile.references
+            (Path(item.path).read_bytes(), item.mime_type)
+            for item in profile.references
         )
         return result
 
     def generate_candidate(self) -> Path:
         profile = self.load()
         if not profile:
-            raise ValueError("Envie e salve as três fotos antes de criar a Imagem Mestre.")
+            raise ValueError(
+                "Envie e salve as três fotos antes de criar a Imagem Mestre."
+            )
         provider = GeminiImageProvider()
         prompt = (
             f"Crie uma Imagem Mestre fotográfica e realista de {profile.name}, {profile.role}, "
@@ -157,7 +164,9 @@ class AvatarMasterStore:
             image_size="1K",
             reference_images=self.references(include_master=False),
         )
-        target = self.candidates_dir / f"candidate-v{profile.version}{generated.extension}"
+        target = (
+            self.candidates_dir / f"candidate-v{profile.version}{generated.extension}"
+        )
         target.write_bytes(generated.data)
         return target
 
