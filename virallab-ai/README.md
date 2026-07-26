@@ -1,35 +1,49 @@
 # RP ViralLab Studio
 
-Sistema de engenharia reversa, geração assistida e produção de vídeos curtos para especialistas em saúde.
+Sistema de análise, geração assistida e produção de vídeos curtos para especialistas em saúde.
 
-## Estado atual
+## Estado do produto
 
-**MVP v0.5 — front-end RP, aprendizado auditável e renderização completa.**
+O código atual representa a base funcional do Studio 2.0. A direção oficial para a próxima evolução está consolidada em [ViralLab Studio 3.0 — Diretrizes de Produto](docs/DIRETRIZES_PRODUTO_V3.md).
 
-O ViralLab transforma um tema em:
+> Importante: uma função descrita no roadmap não deve ser apresentada como disponível até estar implementada, testada e promovida para `production`.
 
-- brief estruturado;
-- hook e tese;
-- roteiro e storyboard;
-- manifesto de falas do avatar;
-- plano de produção;
-- vídeo vertical 1080 × 1920;
-- voz, trilha e legendas;
-- registro do feedback editorial no DNA RP.
+## Fluxo oficial da versão 3.0
 
-## Interface RP
+1. **Analisar vídeo** *(opcional)*
+2. **Estratégia**
+3. **Roteiro**
+4. **Avatar IA — Imagem Mestre**
+5. **Voz**
+6. **Criativos**
+7. **Render**
+8. **Publicação**
+9. **Aprendizado**
 
-A interface foi desenhada para uso diário, sem exigir domínio técnico. Ela possui cinco áreas:
+O usuário pode começar por um vídeo de referência ou criar do zero.
 
-1. **Estratégia** — tema, público, objetivo, duração, formato e nível de evidência.
-2. **Roteiro** — hook, tese, storyboard, cenas e download do pacote.
-3. **Produção** — upload guiado do avatar, capturas, provas e trilha.
-4. **Render** — prévia ou geração do MP4 final com FFmpeg.
-5. **DNA RP** — avaliação, aprovação, estilo preferido e memória editorial.
+## Decisão central: Avatar IA
 
-A identidade utiliza fundo azul-marinho escuro, acento ciano, detalhes dourados e o monograma RP. A marca gráfica oficial poderá substituir o monograma sem alterar o fluxo.
+A Imagem Mestre deve ser criada com apenas três fotos autorizadas do usuário:
 
-## Executar a interface
+- frente;
+- lado esquerdo;
+- lado direito.
+
+O fluxo inclui validação dos ângulos, geração da Imagem Mestre, aprovação explícita, reutilização entre projetos e exclusão das referências. Na primeira implementação, trata-se de geração orientada por referências, não de uma promessa de treinamento biométrico ou clonagem perfeita.
+
+## Capacidades da base atual
+
+- análise de vídeo por upload ou URL;
+- brief, hook, tese, roteiro e storyboard;
+- cenas com narração, texto e direção visual;
+- perfil visual de referência;
+- gravação ou upload de voz;
+- geração e aprovação de criativos;
+- renderização vertical com voz, trilha e legendas;
+- feedback editorial e aprendizado auditável.
+
+## Executar localmente
 
 Requer Python 3.11 ou superior. Para renderizar, FFmpeg e FFprobe devem estar instalados.
 
@@ -45,41 +59,6 @@ Para instalar também os testes:
 python -m pip install -e ".[all]"
 pytest -q
 ```
-
-## Fluxo visual
-
-```text
-Estratégia
-    ↓
-Roteiro e storyboard
-    ↓
-Produção dos materiais
-    ↓
-Renderização
-    ↓
-Avaliação editorial
-    ↓
-DNA RP
-```
-
-## Aprendizado transparente
-
-Cada avaliação é salva localmente em:
-
-```text
-workspace/learning/feedback.jsonl
-```
-
-Os registros incluem tema, nota, aprovação, hook original, hook preferido, direção editorial, observações, projeto e data.
-
-Nesta fase, o sistema não modifica um modelo silenciosamente. A base será utilizada para:
-
-- enriquecer os prompts;
-- selecionar exemplos semelhantes;
-- ranquear hooks;
-- consolidar o DNA Rodrigo;
-- criar avaliações automáticas;
-- futuramente sustentar RAG ou fine-tuning.
 
 ## Estrutura de um projeto
 
@@ -99,6 +78,8 @@ workspace/
     └── feedback.jsonl
 ```
 
+O `video-package.json` é a fonte única de verdade do processo. Mudanças de esquema devem ser versionadas e acompanhadas de migração para projetos existentes.
+
 ## Modos de IA
 
 - `local`: gratuito, determinístico e sem internet;
@@ -117,12 +98,29 @@ virallab "IA na fisioterapia" \
   --render
 ```
 
+## Qualidade e publicação
+
+Fluxo recomendado:
+
+```text
+branch de trabalho
+→ Pull Request
+→ ViralLab Guardian verde
+→ main
+→ Release Gate
+→ production
+```
+
+O Streamlit de produção deve acompanhar `production`. Alterações não validadas não devem chegar ao aplicativo publicado.
+
 ## Princípios
 
 - conteúdo original, inspirado em padrões, nunca cópia literal;
 - evidência e clareza acima de sensacionalismo;
 - revisão humana antes da publicação;
+- consentimento explícito para uso de rosto e voz;
+- exclusão e substituição das referências pessoais;
 - processamento local quando reduzir custo ou proteger dados;
 - proibição de dados clínicos identificáveis em serviços públicos de IA;
 - aprendizado auditável e reversível;
-- `video-package.json` como fonte única de verdade do processo.
+- segredos nunca armazenados no repositório.
