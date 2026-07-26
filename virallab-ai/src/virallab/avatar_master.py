@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import json
+import shutil
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterable
 
 from .image_provider import GeminiImageProvider, ImageGenerationError
 
@@ -43,7 +43,7 @@ class AvatarMasterStore:
     ANGLES = ("front", "left", "right")
 
     def __init__(self, workspace: str | Path) -> None:
-        self.root = Path(workspace) / "avatar-master"
+        self.root = (Path(workspace) / "avatar-master").resolve()
         self.refs_dir = self.root / "references"
         self.candidates_dir = self.root / "candidates"
         self.root.mkdir(parents=True, exist_ok=True)
@@ -66,6 +66,7 @@ class AvatarMasterStore:
         if missing:
             raise ValueError("Envie as três fotos: frente, lado esquerdo e lado direito.")
 
+        previous = self.load()
         references: list[ReferencePhoto] = []
         for angle in self.ANGLES:
             data, filename, mime_type = photos[angle]
@@ -79,10 +80,18 @@ class AvatarMasterStore:
             target = self.refs_dir / f"{angle}{suffix}"
             target.write_bytes(data)
             references.append(
-                ReferencePhoto(angle=angle, path=str(target), mime_type=mime_type or "image/jpeg")
+                ReferencePhoto(
+                    angle=angle,
+                    path=str(target),
+                    mime_type=mime_type or "image/jpeg",
+                )
             )
 
-        previous = self.load()
+        for old in self.root.glob("master.*"):
+            old.unlink(missing_ok=True)
+        for old in self.candidates_dir.glob("candidate-*"):
+            old.unlink(missing_ok=True)
+
         profile = AvatarMasterProfile(
             name=name.strip() or "Autor",
             role=role.strip() or "Autor e especialista",
@@ -122,7 +131,9 @@ class AvatarMasterStore:
             master = Path(profile.master_image_path)
             if master.exists():
                 result.append((master.read_bytes(), profile.master_mime_type or "image/png"))
-        result.extend((Path(item.path).read_bytes(), item.mime_type) for item in profile.references)
+        result.extend(
+            (Path(item.path).read_bytes(), item.mime_type) for item in profile.references
+        )
         return result
 
     def generate_candidate(self) -> Path:
@@ -154,15 +165,19 @@ class AvatarMasterStore:
         profile = self.load()
         if not profile:
             raise ValueError("Perfil de Avatar IA não encontrado.")
-        candidate = Path(candidate_path)
-        if not candidate.exists() or candidate.parent != self.candidates_dir:
+        candidate = Path(candidate_path).resolve()
+        if not candidate.exists() or candidate.parent != self.candidates_dir.resolve():
             raise ValueError("Imagem candidata inválida.")
         suffix = candidate.suffix.lower() or ".png"
         for old in self.root.glob("master.*"):
             old.unlink(missing_ok=True)
         master = self.root / f"master{suffix}"
         master.write_bytes(candidate.read_bytes())
-        mime = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp"}.get(suffix, "image/png")
+        mime = {
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".webp": "image/webp",
+        }.get(suffix, "image/png")
         approved = AvatarMasterProfile(
             name=profile.name,
             role=profile.role,
@@ -179,18 +194,15 @@ class AvatarMasterStore:
         return approved
 
     def delete(self) -> None:
-        for path in sorted(self.root.rglob("*"), reverse=True):
-            if path.is_file():
-                path.unlink(missing_ok=True)
-            elif path.is_dir():
-                path.rmdir()
+        shutil.rmtree(self.root, ignore_errors=True)
         self.root.mkdir(parents=True, exist_ok=True)
         self.refs_dir.mkdir(parents=True, exist_ok=True)
         self.candidates_dir.mkdir(parents=True, exist_ok=True)
 
     def _write(self, profile: AvatarMasterProfile) -> None:
         self.metadata_path.write_text(
-            json.dumps(profile.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8"
+            json.dumps(profile.to_dict(), ensure_ascii=False, indent=2),
+            encoding="utf-8",
         )
 
 
