@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from types import SimpleNamespace
-
 from virallab.streamlit_navigation import (
     LOGICAL_STEP_KEY,
     WIDGET_STEP_KEY,
@@ -24,7 +22,9 @@ def test_programmatic_step_is_mirrored_to_private_widget_key() -> None:
     fake = FakeStreamlit()
     install_safe_step_selectbox(fake)
 
-    selected = fake.selectbox("Etapa", options=["script", "avatar"], key=LOGICAL_STEP_KEY)
+    selected = fake.selectbox(
+        "Etapa", options=["script", "avatar"], key=LOGICAL_STEP_KEY
+    )
 
     assert selected == "script"
     assert fake.session_state[WIDGET_STEP_KEY] == "script"

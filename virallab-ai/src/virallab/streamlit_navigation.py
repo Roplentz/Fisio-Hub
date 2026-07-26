@@ -27,7 +27,10 @@ def install_safe_step_selectbox(st_module: Any) -> Callable[..., Any]:
             return original_selectbox(*args, **kwargs)
 
         logical_step = st_module.session_state.get(LOGICAL_STEP_KEY)
-        if logical_step is not None and st_module.session_state.get(WIDGET_STEP_KEY) != logical_step:
+        if (
+            logical_step is not None
+            and st_module.session_state.get(WIDGET_STEP_KEY) != logical_step
+        ):
             st_module.session_state[WIDGET_STEP_KEY] = logical_step
 
         user_on_change = kwargs.get("on_change")
@@ -35,7 +38,9 @@ def install_safe_step_selectbox(st_module: Any) -> Callable[..., Any]:
         user_kwargs = kwargs.get("kwargs") or {}
 
         def sync_step() -> None:
-            st_module.session_state[LOGICAL_STEP_KEY] = st_module.session_state[WIDGET_STEP_KEY]
+            st_module.session_state[LOGICAL_STEP_KEY] = st_module.session_state[
+                WIDGET_STEP_KEY
+            ]
             if user_on_change:
                 user_on_change(*user_args, **user_kwargs)
 
