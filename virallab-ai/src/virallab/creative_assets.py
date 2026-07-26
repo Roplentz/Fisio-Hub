@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from .asset_library import AssetLibrary, AssetRecord
+from .avatar_master import AvatarMasterProfile, AvatarMasterStore, avatar_prompt
 from .author_profile import AuthorProfile, AuthorProfileStore
 from .image_provider import GeminiImageProvider, ImageGenerationError
 
@@ -24,6 +25,7 @@ def build_scene_prompt(
     theme: str = "",
     visual_style: str = "RP cinematográfico",
     author_profile: AuthorProfile | None = None,
+    avatar_profile: AvatarMasterProfile | None = None,
 ) -> str:
     """Build a production-ready vertical-image prompt from a storyboard scene."""
     scene_type = str(getattr(scene, "scene_type", "broll"))
@@ -31,7 +33,9 @@ def build_scene_prompt(
     narration = str(getattr(scene, "narration", "")).strip()
     on_screen = str(getattr(scene, "on_screen_text", "")).strip()
 
-    if scene_type == "avatar" and author_profile:
+    if scene_type == "avatar" and avatar_profile and avatar_profile.approved:
+        base = avatar_prompt(avatar_profile)
+    elif scene_type == "avatar" and author_profile:
         base = _author_identity_instruction(author_profile)
     else:
         type_rules = {
@@ -96,28 +100,39 @@ def generate_scene_asset(
 ) -> AssetRecord:
     project_path = Path(project_dir)
     provider = GeminiImageProvider()
-    reference_image: bytes | None = None
-    reference_mime = "image/jpeg"
-    profile: AuthorProfile | None = None
+    references: list[tuple[bytes, str]] = []
+    legacy_reference: bytes | None = None
+    legacy_mime = "image/jpeg"
+    legacy_profile: AuthorProfile | None = None
+    avatar_profile: AvatarMasterProfile | None = None
     final_prompt = prompt
 
     if str(getattr(scene, "scene_type", "")) == "avatar":
         workspace = project_path.parent.parent
-        store = AuthorProfileStore(workspace)
-        profile = store.load()
-        reference = store.reference()
-        if reference:
-            reference_image, reference_mime = reference
-            identity = _author_identity_instruction(profile)
+        avatar_store = AvatarMasterStore(workspace)
+        avatar_profile = avatar_store.load()
+        if avatar_profile and avatar_profile.approved:
+            references = avatar_store.references(include_master=True)
+            identity = avatar_prompt(avatar_profile)
             if identity not in final_prompt:
                 final_prompt = f"{identity} {final_prompt}"
+        else:
+            legacy_store = AuthorProfileStore(workspace)
+            legacy_profile = legacy_store.load()
+            legacy = legacy_store.reference()
+            if legacy:
+                legacy_reference, legacy_mime = legacy
+                identity = _author_identity_instruction(legacy_profile)
+                if identity not in final_prompt:
+                    final_prompt = f"{identity} {final_prompt}"
 
     generated = provider.generate(
         final_prompt,
         aspect_ratio=aspect_ratio,
         image_size=image_size,
-        reference_image=reference_image,
-        reference_mime_type=reference_mime,
+        reference_image=legacy_reference,
+        reference_mime_type=legacy_mime,
+        reference_images=references,
     )
     library = AssetLibrary(project_path)
     return library.add_bytes(
@@ -132,8 +147,14 @@ def generate_scene_asset(
             "aspect_ratio": aspect_ratio,
             "image_size": image_size,
             "scene_type": str(getattr(scene, "scene_type", "")),
-            "author_reference": bool(reference_image),
-            "author_name": profile.name if profile else "",
+            "avatar_master": bool(avatar_profile and avatar_profile.approved),
+            "avatar_version": avatar_profile.version if avatar_profile else 0,
+            "author_reference": bool(references or legacy_reference),
+            "author_name": (
+                avatar_profile.name
+                if avatar_profile
+                else legacy_profile.name if legacy_profile else ""
+            ),
         },
     )
 
