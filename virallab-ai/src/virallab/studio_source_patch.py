@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 VOICE_START = "def render_voice(package, package_path: Path) -> None:\n"
 VOICE_END = "\ndef render_creatives(package, package_path: Path) -> None:\n"
 STEPS_MARKER = 'STEPS = {\n    "analysis": "01 · Analisar vídeo",'
