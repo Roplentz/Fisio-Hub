@@ -51,18 +51,28 @@ jobs:
           python -m pip install -e ".[test,drive]" ruff
 
       - name: Compile all Python files
-        run: python -m compileall -q app.py pages src tests
+        run: python -m compileall -q app.py app_v3.py pages src tests
 
       - name: Ruff critical-error scan
-        run: ruff check app.py pages src tests --select E9,F63,F7,F82
+        run: ruff check app.py app_v3.py pages src tests --select E9,F63,F7,F82
 
       - name: Run automated tests
-        run: pytest -q
+        run: pytest -q --junitxml=pytest-report.xml
+
+      - name: Upload pytest report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: virallab-pytest-report
+          path: virallab-ai/pytest-report.xml
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Import smoke test
         run: |
           python - <<'PY'
           from virallab.asset_library import AssetLibrary
+          from virallab.avatar_master import AvatarMasterStore
           from virallab.creative_assets import build_scene_prompt
           from virallab.project_store import ProjectStore
           from virallab.semantic_analyzer import analyze_transcript
