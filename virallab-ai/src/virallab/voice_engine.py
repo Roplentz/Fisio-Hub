@@ -45,7 +45,9 @@ class GeneratedVoice:
 class VoiceProvider(Protocol):
     name: str
 
-    def generate(self, text: str, output_path: Path, settings: VoiceSettings) -> None: ...
+    def generate(
+        self, text: str, output_path: Path, settings: VoiceSettings
+    ) -> None: ...
 
 
 class KokoroProvider:
@@ -71,7 +73,9 @@ class KokoroProvider:
         try:
             import numpy as np
         except ImportError as exc:
-            raise VoiceError("NumPy é necessário para unir os segmentos de voz.") from exc
+            raise VoiceError(
+                "NumPy é necessário para unir os segmentos de voz."
+            ) from exc
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
         sf.write(output_path, np.concatenate(chunks), 24000)
@@ -91,7 +95,11 @@ class VoiceEngine:
     @staticmethod
     def cache_key(text: str, provider: str, settings: VoiceSettings) -> str:
         payload = json.dumps(
-            {"text": text, "provider": provider, "settings": asdict(settings.normalized())},
+            {
+                "text": text,
+                "provider": provider,
+                "settings": asdict(settings.normalized()),
+            },
             ensure_ascii=False,
             sort_keys=True,
         )

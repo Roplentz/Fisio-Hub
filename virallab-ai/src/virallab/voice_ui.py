@@ -4,7 +4,12 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .voice import VoiceError, load_voice_plan, save_narration, update_voice_plan_with_scenes
+from .voice import (
+    VoiceError,
+    load_voice_plan,
+    save_narration,
+    update_voice_plan_with_scenes,
+)
 from .voice_engine import VoiceEngine, VoiceSettings
 
 AUTOTEST_KEYS = {
@@ -33,7 +38,9 @@ def autotest_report(package_path: Path) -> dict[str, bool]:
     if metadata_path.exists():
         try:
             metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
-            metadata_valid = bool(metadata.get("provider") and metadata.get("cache_key"))
+            metadata_valid = bool(
+                metadata.get("provider") and metadata.get("cache_key")
+            )
         except (json.JSONDecodeError, OSError):
             metadata_valid = False
     return {
@@ -59,7 +66,9 @@ def render_autotest_result(st: Any, package_path: Path) -> None:
     for column, (key, passed) in zip(columns, report.items(), strict=True):
         column.metric(labels[key], "OK" if passed else "Falhou")
     if all(report.values()):
-        st.success("Autoteste concluído: geração, cache, metadados e sincronização estão prontos.")
+        st.success(
+            "Autoteste concluído: geração, cache, metadados e sincronização estão prontos."
+        )
     else:
         failed = ", ".join(labels[key] for key, passed in report.items() if not passed)
         st.warning(f"Autoteste parcial. Verifique: {failed}.")
@@ -84,12 +93,16 @@ def render_voice(st: Any, package: Any, package_path: Path) -> None:
     )
 
     if mode == "Gerar com IA":
-        st.info("Motor inicial: Kokoro local e aberto. O áudio e o roteiro permanecem no projeto.")
+        st.info(
+            "Motor inicial: Kokoro local e aberto. O áudio e o roteiro permanecem no projeto."
+        )
 
         with st.container(border=True):
             auto_left, auto_right = st.columns([0.72, 0.28])
             auto_left.markdown("**Modo de teste rápido**")
-            auto_left.caption("Preenche os parâmetros recomendados e permite testar todo o fluxo com um clique.")
+            auto_left.caption(
+                "Preenche os parâmetros recomendados e permite testar todo o fluxo com um clique."
+            )
             if auto_right.button("Preencher autoteste", use_container_width=True):
                 apply_autotest_defaults(st.session_state)
                 st.rerun()
@@ -159,7 +172,11 @@ def render_voice(st: Any, package: Any, package_path: Path) -> None:
             style=style,
             speaker_boost=speaker_boost,
         )
-        generate_label = "Executar autoteste completo" if autotest_enabled else "Gerar narração com IA"
+        generate_label = (
+            "Executar autoteste completo"
+            if autotest_enabled
+            else "Gerar narração com IA"
+        )
         if st.button(generate_label, type="primary", use_container_width=True):
             try:
                 with st.spinner("Gerando e sincronizando a narração..."):
@@ -189,7 +206,9 @@ def render_voice(st: Any, package: Any, package_path: Path) -> None:
         )
         if audio is not None:
             st.audio(audio.getvalue())
-            if st.button("Salvar e sincronizar voz", type="primary", use_container_width=True):
+            if st.button(
+                "Salvar e sincronizar voz", type="primary", use_container_width=True
+            ):
                 try:
                     plan = save_narration(
                         package_path,
@@ -225,7 +244,9 @@ def render_voice(st: Any, package: Any, package_path: Path) -> None:
         c3.metric("Cenas", len(plan.scenes))
         if st.session_state.get("voice_autotest_enabled", False):
             render_autotest_result(st, package_path)
-        if st.button("Continuar para Criativos →", type="primary", use_container_width=True):
+        if st.button(
+            "Continuar para Criativos →", type="primary", use_container_width=True
+        ):
             st.session_state.studio_step = "creatives"
             st.rerun()
 
