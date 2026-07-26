@@ -11,11 +11,20 @@ def test_collect_neural_status_without_workspace(tmp_path: Path, monkeypatch) ->
 
     status = collect_neural_status(tmp_path)
 
-    assert status["total_count"] == 6
+    assert status["total_count"] == len(status["services"])
+    assert status["total_count"] == 7
     assert status["feedback_count"] == 0
     assert status["project_count"] == 0
     keys = {service["key"] for service in status["services"]}
-    assert keys == {"gemini", "qwen", "embedding", "whisper", "dna", "render"}
+    assert keys == {
+        "gemini",
+        "qwen",
+        "embedding",
+        "whisper",
+        "dna",
+        "render",
+        "drive",
+    }
 
 
 def test_collect_neural_status_counts_learning_and_projects(
