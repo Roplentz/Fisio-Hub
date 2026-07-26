@@ -12,8 +12,10 @@ from pathlib import Path
 
 import streamlit as st
 
+from virallab.quality_patch import install_quality_patch
 from virallab.streamlit_navigation import install_safe_step_selectbox
 
+install_quality_patch()
 original_selectbox = install_safe_step_selectbox(st)
 try:
     runpy.run_path(str(Path(__file__).with_name("app_v3.py")), run_name="__main__")
