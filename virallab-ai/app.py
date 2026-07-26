@@ -1,7 +1,7 @@
 """Ponto de entrada estável do RP ViralLab Studio 3.0.
 
 O Streamlit Cloud executa este arquivo diretamente. A aplicação é carregada
-como módulo Python normal, sem ``exec()``, injeção de código ou monkey-patch.
+como módulo Python normal, sem execução dinâmica, injeção de código ou patches.
 """
 
 from __future__ import annotations
