@@ -1,3 +1,14 @@
-"""Entry point do RP ViralLab Studio 3.0."""
+"""Ponto de entrada do RP ViralLab Studio 3.0.
 
-from app_v3 import *  # noqa: F403
+O Streamlit Cloud executa este arquivo diretamente. A interface principal fica em
+``app_v3.py`` e é executada no mesmo contexto de script para que chamadas como
+``st.set_page_config`` e os componentes visuais sejam renderizados corretamente.
+"""
+
+from __future__ import annotations
+
+import runpy
+from pathlib import Path
+
+
+runpy.run_path(str(Path(__file__).with_name("app_v3.py")), run_name="__main__")
