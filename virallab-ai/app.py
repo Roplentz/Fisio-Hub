@@ -43,7 +43,9 @@ def set_page_config_with_quality_controls(*args, **kwargs):
             key="quality_brand_text",
             help="Deixe vazio para não exibir assinatura.",
         )
-        st.caption("O estilo é aplicado aos textos por cena e às legendas incorporadas.")
+        st.caption(
+            "O estilo é aplicado aos textos por cena e às legendas incorporadas."
+        )
     os.environ["VIRALLAB_CAPTION_STYLE"] = style
     os.environ["VIRALLAB_BRAND_TEXT"] = brand.strip()
     return result

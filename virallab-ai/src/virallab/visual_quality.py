@@ -103,7 +103,9 @@ PRESETS: dict[str, CaptionPreset] = {
 
 
 def get_preset(key: str | None = None) -> CaptionPreset:
-    selected = (key or os.getenv("VIRALLAB_CAPTION_STYLE", "educational")).strip().lower()
+    selected = (
+        (key or os.getenv("VIRALLAB_CAPTION_STYLE", "educational")).strip().lower()
+    )
     return PRESETS.get(selected, PRESETS["educational"])
 
 
@@ -143,7 +145,9 @@ def subtitle_force_style(preset: CaptionPreset) -> str:
     )
 
 
-def overlay_drawtext_filter(text: str, width: int, height: int, preset: CaptionPreset) -> str:
+def overlay_drawtext_filter(
+    text: str, width: int, height: int, preset: CaptionPreset
+) -> str:
     wrapped = wrap_caption(text, max_chars=preset.max_chars, max_lines=2)
     escaped = (
         wrapped.replace("\\", r"\\")
@@ -194,7 +198,11 @@ def normalize_srt_text(path: str | Path, preset: CaptionPreset | None = None) ->
         if not stripped or stripped.isdigit() or "-->" in stripped:
             normalized.append(line)
         else:
-            normalized.append(wrap_caption(stripped, max_chars=selected.max_chars, max_lines=2).replace("\\N", "\n"))
+            normalized.append(
+                wrap_caption(
+                    stripped, max_chars=selected.max_chars, max_lines=2
+                ).replace("\\N", "\n")
+            )
     target.write_text("\n".join(normalized).rstrip() + "\n", encoding="utf-8")
 
 
