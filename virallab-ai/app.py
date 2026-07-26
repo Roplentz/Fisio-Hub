@@ -8,13 +8,13 @@ O Streamlit Cloud executa este arquivo diretamente. A interface principal fica e
 from __future__ import annotations
 
 import os
-import runpy
 from pathlib import Path
 
 import streamlit as st
 
 from virallab.quality_patch import install_quality_patch
 from virallab.streamlit_navigation import install_safe_step_selectbox
+from virallab.studio_source_patch import install_voice_ui
 from virallab.visual_quality import PRESETS
 
 install_quality_patch()
@@ -53,7 +53,9 @@ def set_page_config_with_quality_controls(*args, **kwargs):
 
 st.set_page_config = set_page_config_with_quality_controls
 try:
-    runpy.run_path(str(Path(__file__).with_name("app_v3.py")), run_name="__main__")
+    studio_path = Path(__file__).with_name("app_v3.py")
+    studio_source = install_voice_ui(studio_path.read_text(encoding="utf-8"))
+    exec(compile(studio_source, str(studio_path), "exec"), {"__name__": "__main__"})
 finally:
     st.selectbox = original_selectbox
     st.set_page_config = original_page_config
