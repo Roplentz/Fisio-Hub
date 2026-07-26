@@ -35,6 +35,31 @@ class GeneratedImage:
         return target
 
 
+def _build_interaction_inputs(
+    prompt: str,
+    references: list[tuple[bytes, str]] | None = None,
+) -> list[dict[str, Any]]:
+    """Build Gemini Interactions multimodal input blocks.
+
+    The Interactions API expects image bytes in top-level ``data`` and
+    ``mime_type`` fields. ``inline_data`` belongs to the legacy
+    ``generateContent`` parts format and is rejected by this endpoint.
+    """
+
+    inputs: list[dict[str, Any]] = [{"type": "text", "text": prompt}]
+    for data, mime_type in references or []:
+        if not data:
+            continue
+        inputs.append(
+            {
+                "type": "image",
+                "mime_type": mime_type or "image/jpeg",
+                "data": base64.b64encode(data).decode("ascii"),
+            }
+        )
+    return inputs
+
+
 class GeminiImageProvider:
     """Gemini REST adapter for provider-neutral Visual Brain assets."""
 
@@ -59,23 +84,11 @@ class GeminiImageProvider:
         reference_images: list[tuple[bytes, str]] | None = None,
     ) -> GeneratedImage:
         endpoint = "https://generativelanguage.googleapis.com/v1beta/interactions"
-        inputs: list[dict[str, Any]] = [{"type": "text", "text": prompt}]
 
         normalized_references = list(reference_images or [])
         if reference_image:
             normalized_references.insert(0, (reference_image, reference_mime_type))
-        for data, mime_type in normalized_references:
-            if not data:
-                continue
-            inputs.append(
-                {
-                    "type": "image",
-                    "inline_data": {
-                        "mime_type": mime_type or "image/jpeg",
-                        "data": base64.b64encode(data).decode("ascii"),
-                    },
-                }
-            )
+        inputs = _build_interaction_inputs(prompt, normalized_references)
 
         payload = {
             "model": self.model,
