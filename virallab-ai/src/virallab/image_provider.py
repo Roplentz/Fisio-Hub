@@ -56,19 +56,27 @@ class GeminiImageProvider:
         image_size: str = "1K",
         reference_image: bytes | None = None,
         reference_mime_type: str = "image/jpeg",
+        reference_images: list[tuple[bytes, str]] | None = None,
     ) -> GeneratedImage:
         endpoint = "https://generativelanguage.googleapis.com/v1beta/interactions"
         inputs: list[dict[str, Any]] = [{"type": "text", "text": prompt}]
+
+        normalized_references = list(reference_images or [])
         if reference_image:
+            normalized_references.insert(0, (reference_image, reference_mime_type))
+        for data, mime_type in normalized_references:
+            if not data:
+                continue
             inputs.append(
                 {
                     "type": "image",
                     "inline_data": {
-                        "mime_type": reference_mime_type,
-                        "data": base64.b64encode(reference_image).decode("ascii"),
+                        "mime_type": mime_type or "image/jpeg",
+                        "data": base64.b64encode(data).decode("ascii"),
                     },
                 }
             )
+
         payload = {
             "model": self.model,
             "input": inputs,
