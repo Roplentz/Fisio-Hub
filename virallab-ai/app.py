@@ -10,4 +10,13 @@ from __future__ import annotations
 import runpy
 from pathlib import Path
 
-runpy.run_path(str(Path(__file__).with_name("app_v3.py")), run_name="__main__")
+import streamlit as st
+
+from virallab.streamlit_navigation import install_safe_step_selectbox
+
+
+original_selectbox = install_safe_step_selectbox(st)
+try:
+    runpy.run_path(str(Path(__file__).with_name("app_v3.py")), run_name="__main__")
+finally:
+    st.selectbox = original_selectbox
