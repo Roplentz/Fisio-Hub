@@ -76,6 +76,7 @@ def initialize_state() -> None:
         "package_dir": None,
         "preferred_hook": "",
         "studio_step": "analysis",
+        "step_selector": "analysis",
         "pending_video_path": None,
         "pending_video_name": None,
         "pending_video_source": None,
@@ -83,6 +84,18 @@ def initialize_state() -> None:
     }
     for key, value in defaults.items():
         st.session_state.setdefault(key, value)
+
+
+def go_to_step(step: str) -> None:
+    if step not in STEPS:
+        raise ValueError(f"Etapa inválida: {step}")
+    st.session_state.studio_step = step
+    st.rerun()
+
+
+def sync_step_from_selector() -> None:
+    selected = st.session_state.get("step_selector", "analysis")
+    st.session_state.studio_step = selected if selected in STEPS else "analysis"
 
 
 def project_dir(project_id: str) -> Path:
@@ -95,6 +108,7 @@ def new_project() -> None:
     st.session_state.package_dir = None
     st.session_state.preferred_hook = ""
     st.session_state.studio_step = "analysis"
+    st.session_state.step_selector = "analysis"
     st.session_state.avatar_candidate = None
 
 
@@ -137,8 +151,7 @@ def render_analysis() -> None:
                 st.error(str(exc))
     st.divider()
     if st.button("✨ Criar do zero, sem vídeo", use_container_width=True):
-        st.session_state.studio_step = "strategy"
-        st.rerun()
+        go_to_step("strategy")
 
 
 def render_strategy() -> None:
@@ -165,8 +178,7 @@ def render_strategy() -> None:
             st.session_state.package = package
             st.session_state.package_dir = str(out)
             st.session_state.preferred_hook = package.hook
-            st.session_state.studio_step = "script"
-            st.rerun()
+            go_to_step("script")
         except Exception as exc:
             st.error(f"Não foi possível gerar: {exc}")
 
@@ -188,8 +200,7 @@ def render_script(package) -> None:
     render_scene_cards(package)
     st.download_button("Baixar roteiro", json.dumps(package.to_dict(), ensure_ascii=False, indent=2), "video-package.json", "application/json", use_container_width=True)
     if st.button("Continuar para Avatar IA →", type="primary", use_container_width=True):
-        st.session_state.studio_step = "avatar"
-        st.rerun()
+        go_to_step("avatar")
 
 
 def render_avatar() -> None:
@@ -208,8 +219,7 @@ def render_avatar() -> None:
             st.session_state.avatar_candidate = None
             st.rerun()
         if c2.button("Continuar para Voz →", type="primary", use_container_width=True):
-            st.session_state.studio_step = "voice"
-            st.rerun()
+            go_to_step("voice")
         return
 
     name = st.text_input("Nome do avatar", value=profile.name if profile else "Prof. Dr. Rodrigo Plentz")
@@ -286,8 +296,7 @@ def render_voice(package, package_path: Path) -> None:
         c2.metric("Planejado", f"{package.brief.duration_seconds:.0f}s")
         c3.metric("Cenas", len(plan.scenes))
         if st.button("Continuar para Criativos →", type="primary", use_container_width=True):
-            st.session_state.studio_step = "creatives"
-            st.rerun()
+            go_to_step("creatives")
 
 
 def render_creatives(package, package_path: Path) -> None:
@@ -402,7 +411,16 @@ with st.sidebar:
 st.markdown('<section class="hero"><div class="kicker">Estúdio inteligente de conteúdo</div><h1>RP ViralLab Studio 3.0</h1><p>Analisar vídeo → estratégia → roteiro → Avatar IA → voz → criativos → render → publicação → aprendizado.</p></section>', unsafe_allow_html=True)
 st.progress(progress_value())
 
-selected = st.selectbox("Etapa do projeto", options=list(STEPS), format_func=lambda key: STEPS[key], key="studio_step")
+current_step = st.session_state.studio_step if st.session_state.studio_step in STEPS else "analysis"
+st.session_state.step_selector = current_step
+st.selectbox(
+    "Etapa do projeto",
+    options=list(STEPS),
+    format_func=lambda key: STEPS[key],
+    key="step_selector",
+    on_change=sync_step_from_selector,
+)
+selected = st.session_state.studio_step
 package = st.session_state.package
 package_path = Path(st.session_state.package_dir) if st.session_state.package_dir else None
 

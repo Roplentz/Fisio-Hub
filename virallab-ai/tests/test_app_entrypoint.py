@@ -11,5 +11,7 @@ def test_entrypoint_imports_studio_without_dynamic_execution() -> None:
     assert "compile(" not in source
     assert "studio_source_patch" not in source
     assert "quality_patch" not in source
+    assert "streamlit_navigation" not in source
+    assert "install_safe_step_selectbox" not in source
     assert "import app_v3" in source
     compile(source, str(app_path), "exec")
