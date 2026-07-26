@@ -38,7 +38,17 @@ npm run build
 npm run preview
 ```
 
-## Diretriz de UX
+## Diretrizes do projeto
+
+### Open Source First
+
+Antes de desenvolver uma funcionalidade do zero, o projeto deve pesquisar, auditar e aproveitar conhecimento, modelos, bibliotecas, padrões e implementações abertas já existentes.
+
+A diretriz completa, incluindo critérios de licença, maturidade, segurança, arquitetura modular e registro das integrações, está em:
+
+- [Diretriz Open Source First](docs/DIRETRIZ_OPEN_SOURCE_FIRST.md)
+
+### Diretriz de UX
 
 > A complexidade pertence ao sistema.  
 > A simplicidade pertence ao usuário.
