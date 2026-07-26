@@ -65,7 +65,9 @@ st.markdown(
 pending_path = st.session_state.get("pending_video_path")
 pending_name = st.session_state.get("pending_video_name")
 pending_source = st.session_state.get("pending_video_source")
-video_path = Path(pending_path) if pending_path and Path(pending_path).exists() else None
+video_path = (
+    Path(pending_path) if pending_path and Path(pending_path).exists() else None
+)
 
 if video_path is not None:
     source_label = "URL pública" if pending_source not in {None, "upload"} else "Upload"
@@ -109,14 +111,20 @@ with st.expander("Configurações avançadas", expanded=False):
         "Precisão da transcrição",
         ["tiny", "base", "small"],
         index=1,
-        format_func=lambda value: {"tiny": "Rápida", "base": "Equilibrada", "small": "Mais precisa"}[value],
+        format_func=lambda value: {
+            "tiny": "Rápida",
+            "base": "Equilibrada",
+            "small": "Mais precisa",
+        }[value],
     )
     max_moments = c3.slider("Quantidade de frames", 6, 24, 10, 2)
 
 if video_path is not None and st.button(
     "Analisar conteúdo profundamente →", type="primary", use_container_width=True
 ):
-    missing = [binary for binary in ("ffmpeg", "ffprobe") if shutil.which(binary) is None]
+    missing = [
+        binary for binary in ("ffmpeg", "ffprobe") if shutil.which(binary) is None
+    ]
     if missing:
         st.error("O motor de vídeo ainda não está disponível no servidor.")
         st.code("Ausente: " + ", ".join(missing))
@@ -130,13 +138,17 @@ if video_path is not None and st.button(
 
                 st.write("2/4 · Transcrição e leitura da fala")
                 try:
-                    semantic = transcribe_video(video_path, model_size=model_size, language="pt")
+                    semantic = transcribe_video(
+                        video_path, model_size=model_size, language="pt"
+                    )
                     if semantic.warning:
                         warnings.append(semantic.warning)
                 except SemanticAnalysisError as exc:
                     warnings.append(str(exc))
                     semantic = unavailable_semantic_analysis(str(exc))
-                    st.warning("A transcrição falhou; a análise continuará com estrutura e imagem.")
+                    st.warning(
+                        "A transcrição falhou; a análise continuará com estrutura e imagem."
+                    )
 
                 st.write("3/4 · Frames, enquadramento e mudanças visuais")
                 frames_dir = ANALYSIS_DIR / f"{video_path.stem}-frames"
@@ -159,7 +171,9 @@ if video_path is not None and st.button(
                 st.session_state.analysis_warnings = warnings
                 st.session_state.analysis_source_name = pending_name or video_path.name
                 status.update(
-                    label="Análise concluída" if not warnings else "Análise parcial concluída",
+                    label="Análise concluída"
+                    if not warnings
+                    else "Análise parcial concluída",
                     state="complete",
                     expanded=False,
                 )
@@ -181,7 +195,9 @@ warnings = st.session_state.get("analysis_warnings", [])
 if all(item is not None for item in (analysis, semantic, visual, editorial)):
     st.divider()
     if warnings:
-        st.warning("A análise foi concluída com limitações, mas os dados disponíveis foram preservados.")
+        st.warning(
+            "A análise foi concluída com limitações, mas os dados disponíveis foram preservados."
+        )
     else:
         st.success("Análise concluída com sucesso.")
 
@@ -223,7 +239,9 @@ if all(item is not None for item in (analysis, semantic, visual, editorial)):
 
     combined = {
         "source": st.session_state.get("analysis_source_name"),
-        "source_url": pending_source if pending_source not in {"upload", None} else None,
+        "source_url": pending_source
+        if pending_source not in {"upload", None}
+        else None,
         "warnings": warnings,
         "editorial": editorial.to_dict(),
         "structural": analysis.to_dict(),
@@ -242,25 +260,43 @@ if all(item is not None for item in (analysis, semantic, visual, editorial)):
 
     st.divider()
     st.subheader("Criar uma versão original")
-    st.caption("A nova versão usará a estrutura aprendida, sem copiar literalmente o vídeo de referência.")
-    theme = st.text_input("Tema da nova versão", value=editorial.thesis or "IA aplicada à fisioterapia")
-    audience = st.text_input("Público", value=editorial.target_audience or "fisioterapeutas brasileiros")
+    st.caption(
+        "A nova versão usará a estrutura aprendida, sem copiar literalmente o vídeo de referência."
+    )
+    theme = st.text_input(
+        "Tema da nova versão", value=editorial.thesis or "IA aplicada à fisioterapia"
+    )
+    audience = st.text_input(
+        "Público", value=editorial.target_audience or "fisioterapeutas brasileiros"
+    )
     objective = st.selectbox(
         "Objetivo",
-        ["educar", "gerar autoridade", "ganhar seguidores qualificados", "engajar", "vender"],
+        [
+            "educar",
+            "gerar autoridade",
+            "ganhar seguidores qualificados",
+            "engajar",
+            "vender",
+        ],
     )
     cta = st.text_input(
         "CTA",
         value="Siga o Professor RP para aprender inovação e IA aplicada à saúde.",
     )
 
-    if st.button("Criar versão e continuar no Roteiro →", type="primary", use_container_width=True):
+    if st.button(
+        "Criar versão e continuar no Roteiro →",
+        type="primary",
+        use_container_width=True,
+    ):
         try:
             brief = VideoBrief(
                 theme=theme,
                 objective=objective,
                 audience=audience,
-                duration_seconds=min(60, max(15, round(analysis.duration_seconds / 5) * 5)),
+                duration_seconds=min(
+                    60, max(15, round(analysis.duration_seconds / 5) * 5)
+                ),
                 format="professor_cinematico",
                 cta=cta,
                 evidence_level="educacional",
@@ -287,7 +323,9 @@ if all(item is not None for item in (analysis, semantic, visual, editorial)):
 
 st.divider()
 back_col, new_col = st.columns(2)
-back_col.page_link("app.py", label="Voltar ao Studio", icon="↩️", use_container_width=True)
+back_col.page_link(
+    "app.py", label="Voltar ao Studio", icon="↩️", use_container_width=True
+)
 if new_col.button("Limpar análise e começar outra", use_container_width=True):
     clear_analysis_state(st.session_state, keep_video=False)
     st.rerun()

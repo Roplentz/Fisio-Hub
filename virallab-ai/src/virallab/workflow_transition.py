@@ -13,7 +13,9 @@ ANALYSIS_RESULT_KEYS = (
 )
 
 
-def clear_analysis_state(state: MutableMapping[str, Any], *, keep_video: bool = False) -> None:
+def clear_analysis_state(
+    state: MutableMapping[str, Any], *, keep_video: bool = False
+) -> None:
     """Remove resultados antigos para impedir que outro vídeo reutilize uma análise anterior."""
     for key in ANALYSIS_RESULT_KEYS:
         state.pop(key, None)
