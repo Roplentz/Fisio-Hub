@@ -39,7 +39,16 @@ jobs:
         run: python -m py_compile app.py
 
       - name: Run tests
-        run: pytest -q
+        run: pytest -q --junitxml=pytest-report.xml
+
+      - name: Upload pytest report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: virallab-ci-pytest-report
+          path: virallab-ai/pytest-report.xml
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Render smoke video
         run: |
