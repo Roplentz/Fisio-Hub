@@ -25,7 +25,7 @@ class FakeStreamlit:
     def markdown(self, value, **_kwargs):
         self.markdowns.append(value)
 
-    def download_button(self, *args, **_kwargs):
+    def download_button(self, *args, **kwargs):
         self.download = (args, kwargs)
 
     def button(self, *_args, **_kwargs):
