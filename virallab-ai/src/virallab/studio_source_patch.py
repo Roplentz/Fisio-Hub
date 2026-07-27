@@ -112,8 +112,13 @@ def render_system_autotest() -> None:
 
 
 def install_voice_ui(source: str) -> str:
+    """Substitui somente a etapa de voz do Studio."""
+    return _install_voice_step(source)
+
+
+def install_studio_extensions(source: str) -> str:
     """Instala a tela de voz e o autoteste inicial sem duplicar o Studio."""
-    return _install_autotest_step(_install_voice_step(source))
+    return _install_autotest_step(install_voice_ui(source))
 
 
-__all__ = ["install_voice_ui"]
+__all__ = ["install_studio_extensions", "install_voice_ui"]

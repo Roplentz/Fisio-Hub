@@ -1,0 +1,54 @@
+name: ViralLab Delivery Safety
+
+on:
+  pull_request:
+    paths:
+      - "virallab-ai/**"
+      - ".github/workflows/virallab-delivery-safety.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: virallab-delivery-safety-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  streamlit-startup:
+    name: Streamlit startup and HTTP health
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: virallab-ai
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            virallab-ai/requirements.txt
+            virallab-ai/pyproject.toml
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Install production-equivalent dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install -e .
+
+      - name: Compile entrypoints
+        run: python -m compileall -q app.py app_v3.py pages src
+
+      - name: Start Streamlit and verify health
+        run: python scripts/streamlit_smoke.py --app app.py --timeout 120
