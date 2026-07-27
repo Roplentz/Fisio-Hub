@@ -1,10 +1,19 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
+
+from .visual_quality import (
+    brand_drawtext_filter,
+    get_preset,
+    normalize_srt_text,
+    overlay_drawtext_filter,
+    subtitle_force_style,
+)
 
 
 class RenderError(RuntimeError):
@@ -22,15 +31,7 @@ def render_video(
     music_level_db: float = -25.0,
     dry_run: bool = False,
 ) -> Path:
-    """Renderiza um vídeo vertical completo a partir de ``render-plan.json``.
-
-    Recursos do renderizador v0.3:
-    - preserva o áudio dos clipes de avatar;
-    - cria silêncio nos trechos sem áudio para manter a concatenação estável;
-    - aceita trilha opcional com redução automática de volume;
-    - queima ``captions.srt`` no vídeo final;
-    - usa cartões substitutos quando algum asset ainda não existe.
-    """
+    """Renderiza um vídeo vertical completo a partir de ``render-plan.json``."""
     root = Path(package_dir).resolve()
     plan_path = root / "render-plan.json"
     if not plan_path.exists():
@@ -170,7 +171,6 @@ def _segment_command(
         video_filter += "," + _drawtext_filter(text, width, height)
 
     if has_source_audio:
-        audio_inputs: list[str] = []
         audio_map = ["-map", "0:a:0"]
     else:
         base += [
@@ -181,40 +181,35 @@ def _segment_command(
             "-i",
             "anullsrc=channel_layout=stereo:sample_rate=48000",
         ]
-        audio_inputs = []
         audio_map = ["-map", "1:a:0"]
 
-    return (
-        base
-        + audio_inputs
-        + [
-            "-vf",
-            video_filter,
-            "-map",
-            "0:v:0",
-            *audio_map,
-            "-c:v",
-            "libx264",
-            "-preset",
-            "veryfast",
-            "-crf",
-            "20",
-            "-pix_fmt",
-            "yuv420p",
-            "-r",
-            str(fps),
-            "-c:a",
-            "aac",
-            "-ar",
-            "48000",
-            "-ac",
-            "2",
-            "-b:a",
-            "160k",
-            "-shortest",
-            str(output),
-        ]
-    )
+    return base + [
+        "-vf",
+        video_filter,
+        "-map",
+        "0:v:0",
+        *audio_map,
+        "-c:v",
+        "libx264",
+        "-preset",
+        "veryfast",
+        "-crf",
+        "20",
+        "-pix_fmt",
+        "yuv420p",
+        "-r",
+        str(fps),
+        "-c:a",
+        "aac",
+        "-ar",
+        "48000",
+        "-ac",
+        "2",
+        "-b:a",
+        "160k",
+        "-shortest",
+        str(output),
+    ]
 
 
 def _final_mix_command(
@@ -229,6 +224,7 @@ def _final_mix_command(
 ) -> list[str]:
     music = _resolve_music(root, music_file)
     captions = root / "captions.srt"
+    preset = get_preset()
 
     command = [ffmpeg_bin, "-y", "-i", str(stitched)]
     filters: list[str] = []
@@ -243,20 +239,23 @@ def _final_mix_command(
         )
         audio_map = "[aout]"
 
-    video_filter = None
+    video_filters: list[str] = []
     if burn_captions and captions.exists():
+        normalize_srt_text(captions, preset)
         subtitle_path = _subtitle_escape(captions)
-        video_filter = (
+        video_filters.append(
             f"subtitles='{subtitle_path}':"
-            "force_style='FontName=Arial,FontSize=18,PrimaryColour=&H00FFFFFF,"
-            "OutlineColour=&H00000000,BorderStyle=1,Outline=3,Shadow=0,"
-            "Alignment=2,MarginV=180'"
+            f"force_style='{subtitle_force_style(preset)}'"
         )
+
+    brand = os.getenv("VIRALLAB_BRAND_TEXT", "Prof. Dr. Rodrigo Plentz").strip()
+    if brand:
+        video_filters.append(brand_drawtext_filter(brand))
 
     if filters:
         command += ["-filter_complex", ";".join(filters)]
-    if video_filter:
-        command += ["-vf", video_filter]
+    if video_filters:
+        command += ["-vf", ",".join(video_filters)]
 
     command += ["-map", "0:v:0", "-map", audio_map]
     command += [
@@ -288,18 +287,7 @@ def _cover_filter(width: int, height: int, fps: int) -> str:
 
 
 def _drawtext_filter(text: str, width: int, height: int) -> str:
-    escaped = _ffmpeg_escape(text)
-    font_size = max(44, int(width * 0.065))
-    return (
-        "drawtext="
-        f"text='{escaped}':"
-        "fontcolor=white:"
-        f"fontsize={font_size}:"
-        "borderw=4:bordercolor=black@0.75:"
-        "box=1:boxcolor=black@0.38:boxborderw=24:"
-        "x=(w-text_w)/2:"
-        f"y={int(height * 0.72)}"
-    )
+    return overlay_drawtext_filter(text, width, height, get_preset())
 
 
 def _has_audio_stream(media: Path, ffprobe_bin: str) -> bool:
