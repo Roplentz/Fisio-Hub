@@ -17,14 +17,18 @@ from virallab.models import VideoBrief
 from virallab.providers import select_provider
 from virallab.renderer import RenderError, render_video
 from virallab.url_ingest import URLIngestError, download_video_url
-from virallab.voice import VoiceError, load_voice_plan, save_narration, update_voice_plan_with_scenes
+from virallab.voice import load_voice_plan
 from virallab.voice_renderer import render_video_with_voice
+from virallab.voice_ui import render_voice as render_voice_engine
 
 APP_ROOT = Path(__file__).resolve().parent
 WORKSPACE = APP_ROOT / "workspace"
 ANALYSIS_DIR = WORKSPACE / "analysis"
 PROJECTS_DIR = WORKSPACE / "projects"
 LEARNING_STORE = WORKSPACE / "learning" / "feedback.jsonl"
+LOGICAL_STEP_KEY = "studio_step"
+WIDGET_STEP_KEY = "_studio_step_selector"
+
 for directory in (WORKSPACE, ANALYSIS_DIR, PROJECTS_DIR, LEARNING_STORE.parent):
     directory.mkdir(parents=True, exist_ok=True)
 
@@ -75,7 +79,8 @@ def initialize_state() -> None:
         "package": None,
         "package_dir": None,
         "preferred_hook": "",
-        "studio_step": "analysis",
+        LOGICAL_STEP_KEY: "analysis",
+        WIDGET_STEP_KEY: "analysis",
         "pending_video_path": None,
         "pending_video_name": None,
         "pending_video_source": None,
@@ -83,6 +88,26 @@ def initialize_state() -> None:
     }
     for key, value in defaults.items():
         st.session_state.setdefault(key, value)
+
+
+def sync_step_from_widget() -> None:
+    st.session_state[LOGICAL_STEP_KEY] = st.session_state[WIDGET_STEP_KEY]
+
+
+def render_step_selector() -> str:
+    logical_step = st.session_state[LOGICAL_STEP_KEY]
+    if st.session_state.get(WIDGET_STEP_KEY) != logical_step:
+        st.session_state[WIDGET_STEP_KEY] = logical_step
+
+    selected = st.selectbox(
+        "Etapa do projeto",
+        options=list(STEPS),
+        format_func=lambda key: STEPS[key],
+        key=WIDGET_STEP_KEY,
+        on_change=sync_step_from_widget,
+    )
+    st.session_state[LOGICAL_STEP_KEY] = selected
+    return selected
 
 
 def project_dir(project_id: str) -> Path:
@@ -94,7 +119,7 @@ def new_project() -> None:
     st.session_state.package = None
     st.session_state.package_dir = None
     st.session_state.preferred_hook = ""
-    st.session_state.studio_step = "analysis"
+    st.session_state[LOGICAL_STEP_KEY] = "analysis"
     st.session_state.avatar_candidate = None
 
 
@@ -112,7 +137,7 @@ def open_analysis(path: Path, name: str, source: str) -> None:
 
 
 def progress_value() -> float:
-    index = list(STEPS).index(st.session_state.studio_step)
+    index = list(STEPS).index(st.session_state[LOGICAL_STEP_KEY])
     return (index + 1) / len(STEPS)
 
 
@@ -125,7 +150,8 @@ def render_analysis() -> None:
         if uploaded is not None:
             st.video(uploaded.getvalue())
             if st.button("Analisar este vídeo →", type="primary", use_container_width=True):
-                path = save_uploaded_file(uploaded, ANALYSIS_DIR / f"{uuid.uuid4().hex[:10]}{Path(uploaded.name).suffix or '.mp4'}")
+                suffix = Path(uploaded.name).suffix or ".mp4"
+                path = save_uploaded_file(uploaded, ANALYSIS_DIR / f"{uuid.uuid4().hex[:10]}{suffix}")
                 open_analysis(path, uploaded.name, "upload")
     with url_tab:
         url = st.text_input("URL pública", key="v3-analysis-url")
@@ -137,7 +163,7 @@ def render_analysis() -> None:
                 st.error(str(exc))
     st.divider()
     if st.button("✨ Criar do zero, sem vídeo", use_container_width=True):
-        st.session_state.studio_step = "strategy"
+        st.session_state[LOGICAL_STEP_KEY] = "strategy"
         st.rerun()
 
 
@@ -156,7 +182,15 @@ def render_strategy() -> None:
         cta = st.text_area("CTA", value="Siga o Professor RP para aprender IA aplicada à saúde.")
     if st.button("Gerar roteiro e storyboard →", type="primary", use_container_width=True):
         try:
-            brief = VideoBrief(theme=theme, objective=objective, audience=audience, duration_seconds=duration, format=fmt, cta=cta, evidence_level=evidence)
+            brief = VideoBrief(
+                theme=theme,
+                objective=objective,
+                audience=audience,
+                duration_seconds=duration,
+                format=fmt,
+                cta=cta,
+                evidence_level=evidence,
+            )
             package = generate_video_package(brief, provider=select_provider(provider_name))
             out = project_dir(st.session_state.project_id)
             if out.exists():
@@ -165,7 +199,7 @@ def render_strategy() -> None:
             st.session_state.package = package
             st.session_state.package_dir = str(out)
             st.session_state.preferred_hook = package.hook
-            st.session_state.studio_step = "script"
+            st.session_state[LOGICAL_STEP_KEY] = "script"
             st.rerun()
         except Exception as exc:
             st.error(f"Não foi possível gerar: {exc}")
@@ -186,9 +220,15 @@ def render_script(package) -> None:
     st.session_state.preferred_hook = st.text_area("Gancho", value=st.session_state.preferred_hook or package.hook)
     st.markdown(f"**Tese:** {package.thesis}")
     render_scene_cards(package)
-    st.download_button("Baixar roteiro", json.dumps(package.to_dict(), ensure_ascii=False, indent=2), "video-package.json", "application/json", use_container_width=True)
+    st.download_button(
+        "Baixar roteiro",
+        json.dumps(package.to_dict(), ensure_ascii=False, indent=2),
+        "video-package.json",
+        "application/json",
+        use_container_width=True,
+    )
     if st.button("Continuar para Avatar IA →", type="primary", use_container_width=True):
-        st.session_state.studio_step = "avatar"
+        st.session_state[LOGICAL_STEP_KEY] = "avatar"
         st.rerun()
 
 
@@ -208,13 +248,16 @@ def render_avatar() -> None:
             st.session_state.avatar_candidate = None
             st.rerun()
         if c2.button("Continuar para Voz →", type="primary", use_container_width=True):
-            st.session_state.studio_step = "voice"
+            st.session_state[LOGICAL_STEP_KEY] = "voice"
             st.rerun()
         return
 
     name = st.text_input("Nome do avatar", value=profile.name if profile else "Prof. Dr. Rodrigo Plentz")
     role = st.text_input("Papel", value=profile.role if profile else "Autor e especialista")
-    notes = st.text_area("Diretrizes visuais", value=profile.visual_notes if profile else "Aparência profissional, segura e acolhedora; preservar rosto, cabelo e idade aparente.")
+    notes = st.text_area(
+        "Diretrizes visuais",
+        value=profile.visual_notes if profile else "Aparência profissional, segura e acolhedora; preservar rosto, cabelo e idade aparente.",
+    )
     front, left, right = st.columns(3)
     front_photo = front.file_uploader("Foto de frente", type=["png", "jpg", "jpeg", "webp"], key="avatar-front")
     left_photo = left.file_uploader("Lado esquerdo", type=["png", "jpg", "jpeg", "webp"], key="avatar-left")
@@ -263,31 +306,7 @@ def render_avatar() -> None:
 
 
 def render_voice(package, package_path: Path) -> None:
-    st.subheader("Voz e teleprompter")
-    script = "\n\n".join(f"Cena {scene.index}: {scene.narration}" for scene in package.scenes if scene.narration)
-    with st.expander("Abrir teleprompter", expanded=True):
-        st.text_area("Roteiro para leitura", value=script, height=230, disabled=True)
-    mode = st.radio("Entrada de voz", ["Gravar agora", "Enviar arquivo"], horizontal=True)
-    audio = st.audio_input("Grave a narração completa", key="voice-recorder-v3") if mode == "Gravar agora" else st.file_uploader("Envie MP3, WAV, M4A, AAC, OGG ou WebM", type=["mp3", "wav", "m4a", "aac", "ogg", "webm"], key="voice-upload-v3")
-    if audio is not None:
-        st.audio(audio.getvalue())
-        if st.button("Salvar e sincronizar voz", type="primary", use_container_width=True):
-            try:
-                plan = save_narration(package_path, audio.getvalue(), filename=getattr(audio, "name", "narration.wav"))
-                plan = update_voice_plan_with_scenes(package_path, package.scenes, duration=plan.duration, audio_file=plan.audio_file)
-                st.success(f"Voz salva. Duração: {plan.duration:.1f}s.")
-                st.rerun()
-            except VoiceError as exc:
-                st.error(str(exc))
-    plan = load_voice_plan(package_path)
-    if plan:
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Voz", f"{plan.duration:.1f}s")
-        c2.metric("Planejado", f"{package.brief.duration_seconds:.0f}s")
-        c3.metric("Cenas", len(plan.scenes))
-        if st.button("Continuar para Criativos →", type="primary", use_container_width=True):
-            st.session_state.studio_step = "creatives"
-            st.rerun()
+    render_voice_engine(st, package, package_path)
 
 
 def render_creatives(package, package_path: Path) -> None:
@@ -320,9 +339,22 @@ def render_creatives(package, package_path: Path) -> None:
                     st.rerun()
                 except (ImageGenerationError, ValueError) as exc:
                     st.error(str(exc))
-            upload = upload_col.file_uploader("Enviar material", type=["mp4", "mov", "webm", "png", "jpg", "jpeg", "webp"], key=f"upload-v3-{scene.index}", label_visibility="collapsed")
+            upload = upload_col.file_uploader(
+                "Enviar material",
+                type=["mp4", "mov", "webm", "png", "jpg", "jpeg", "webp"],
+                key=f"upload-v3-{scene.index}",
+                label_visibility="collapsed",
+            )
             if upload is not None and upload_col.button("Salvar upload", key=f"save-v3-{scene.index}", use_container_width=True):
-                record = library.add_bytes(scene_index=scene.index, data=upload.getvalue(), extension=Path(upload.name).suffix or ".png", source="upload", provider="human", prompt=edited, metadata={"original_name": upload.name})
+                record = library.add_bytes(
+                    scene_index=scene.index,
+                    data=upload.getvalue(),
+                    extension=Path(upload.name).suffix or ".png",
+                    source="upload",
+                    provider="human",
+                    prompt=edited,
+                    metadata={"original_name": upload.name},
+                )
                 library.set_status(record.id, "approved")
                 st.rerun()
             for record in reversed(library.for_scene(scene.index)):
@@ -354,7 +386,11 @@ def render_output(package_path: Path) -> None:
     if st.button("Renderizar vídeo", type="primary", use_container_width=True, disabled=not approved):
         try:
             with st.spinner("Renderizando..."):
-                video = render_video_with_voice(package_path, burn_captions=burn, music_level_db=music, narration_gain_db=voice_gain) if voice_plan else render_video(package_path, burn_captions=burn, music_level_db=music)
+                video = (
+                    render_video_with_voice(package_path, burn_captions=burn, music_level_db=music, narration_gain_db=voice_gain)
+                    if voice_plan
+                    else render_video(package_path, burn_captions=burn, music_level_db=music)
+                )
             if video.exists():
                 st.video(str(video))
                 st.download_button("Baixar vídeo final", video.read_bytes(), "video-final.mp4", "video/mp4", use_container_width=True)
@@ -370,7 +406,13 @@ def render_publication(package) -> None:
     title = st.text_input("Título", value=package.hook)
     caption = st.text_area("Legenda", value=f"{package.thesis}\n\n{package.brief.cta}", height=180)
     hashtags = st.text_input("Hashtags", value="#fisioterapia #inteligenciaartificial #inovacaoemsaude")
-    st.download_button("Baixar pacote de publicação", json.dumps({"title": title, "caption": caption, "hashtags": hashtags}, ensure_ascii=False, indent=2), "publication-package.json", "application/json", use_container_width=True)
+    st.download_button(
+        "Baixar pacote de publicação",
+        json.dumps({"title": title, "caption": caption, "hashtags": hashtags}, ensure_ascii=False, indent=2),
+        "publication-package.json",
+        "application/json",
+        use_container_width=True,
+    )
 
 
 def render_learning(package) -> None:
@@ -382,7 +424,19 @@ def render_learning(package) -> None:
     approved = st.checkbox("Eu publicaria", value=True)
     notes = st.text_area("O que o ViralLab deve aprender?")
     if st.button("Salvar aprendizado", type="primary", use_container_width=True):
-        save_feedback(FeedbackRecord(project_id=st.session_state.project_id, theme=package.brief.theme, rating=rating, approved=approved, original_hook=package.hook, preferred_hook=st.session_state.preferred_hook or package.hook, notes=notes, preferred_style="Studio 3.0"), LEARNING_STORE)
+        save_feedback(
+            FeedbackRecord(
+                project_id=st.session_state.project_id,
+                theme=package.brief.theme,
+                rating=rating,
+                approved=approved,
+                original_hook=package.hook,
+                preferred_hook=st.session_state.preferred_hook or package.hook,
+                notes=notes,
+                preferred_style="Studio 3.0",
+            ),
+            LEARNING_STORE,
+        )
         st.success("Aprendizado salvo.")
 
 
@@ -399,10 +453,13 @@ with st.sidebar:
         st.rerun()
     st.metric("Taxa de aprovação", f"{summary['approval_rate']}%")
 
-st.markdown('<section class="hero"><div class="kicker">Estúdio inteligente de conteúdo</div><h1>RP ViralLab Studio 3.0</h1><p>Analisar vídeo → estratégia → roteiro → Avatar IA → voz → criativos → render → publicação → aprendizado.</p></section>', unsafe_allow_html=True)
+st.markdown(
+    '<section class="hero"><div class="kicker">Estúdio inteligente de conteúdo</div><h1>RP ViralLab Studio 3.0</h1><p>Analisar vídeo → estratégia → roteiro → Avatar IA → voz → criativos → render → publicação → aprendizado.</p></section>',
+    unsafe_allow_html=True,
+)
 st.progress(progress_value())
 
-selected = st.selectbox("Etapa do projeto", options=list(STEPS), format_func=lambda key: STEPS[key], key="studio_step")
+selected = render_step_selector()
 package = st.session_state.package
 package_path = Path(st.session_state.package_dir) if st.session_state.package_dir else None
 
