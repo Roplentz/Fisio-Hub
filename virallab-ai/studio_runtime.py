@@ -6,8 +6,6 @@ from pathlib import Path
 import streamlit as st
 
 from virallab.asset_library import AssetLibrary
-from virallab.avatar_master import AvatarMasterStore, ImageGenerationError
-from virallab.creative_assets import build_scene_prompt, generate_scene_asset
 from virallab.learning import FeedbackRecord, load_feedback, save_feedback, summarize_preferences
 from virallab.renderer import RenderError, render_video
 from virallab.studio.layout import (
@@ -27,9 +25,15 @@ from virallab.studio.state import (
     initialize_state as initialize_session_state,
     reset_project,
 )
-from virallab.studio.steps import AnalysisAction, AvatarAction, VoiceAction
+from virallab.studio.steps import (
+    AnalysisAction,
+    AvatarAction,
+    CreativesAction,
+    VoiceAction,
+)
 from virallab.studio.steps.analysis import render_analysis as render_analysis_step
 from virallab.studio.steps.avatar import render_avatar as render_avatar_step
+from virallab.studio.steps.creatives import render_creatives as render_creatives_step
 from virallab.studio.steps.script import render_script as render_script_step
 from virallab.studio.steps.strategy import render_strategy as render_strategy_step
 from virallab.studio.steps.voice import render_voice as render_voice_step
@@ -137,66 +141,17 @@ def render_voice(package, package_path: Path) -> None:
 
 
 def render_creatives(package, package_path: Path) -> None:
-    st.subheader("Criativos")
-    avatar_store = AvatarMasterStore(WORKSPACE)
-    avatar_profile = avatar_store.load()
-    if avatar_profile and avatar_profile.approved:
-        st.success(f"Avatar IA ativo: {avatar_profile.name} · versão {avatar_profile.version}")
-    else:
-        st.warning("Nenhuma Imagem Mestre aprovada. Cenas do autor usarão o modo genérico ou a referência antiga.")
-    library = AssetLibrary(package_path)
-    approved_count = sum(1 for item in library.load() if item.status == "approved")
-    c1, c2 = st.columns(2)
-    c1.metric("Cenas", len(package.scenes))
-    c2.metric("Aprovadas", f"{approved_count}/{len(package.scenes)}")
-    style = st.selectbox("DNA visual", ["RP cinematográfico", "Clínico premium", "Editorial científico", "Humano documental", "Minimalista tecnológico"])
-    for scene in package.scenes:
-        records = library.for_scene(scene.index)
-        approved = next((item for item in records if item.status == "approved"), None)
-        prompt = build_scene_prompt(scene, theme=package.brief.theme, visual_style=style, avatar_profile=avatar_profile)
-        with st.container(border=True):
-            st.markdown(f"**Cena {scene.index}** · {'✓ aprovada' if approved else 'aguardando'}")
-            st.caption(scene.visual_direction or scene.narration)
-            edited = st.text_area("Direção da imagem", value=prompt, height=130, key=f"prompt-v3-{scene.index}")
-            generate_col, upload_col = st.columns(2)
-            if generate_col.button("🎨 Gerar variação", key=f"gen-v3-{scene.index}", type="primary", use_container_width=True):
-                try:
-                    with st.spinner("Criando..."):
-                        generate_scene_asset(package_path, scene, prompt=edited)
-                    st.rerun()
-                except (ImageGenerationError, ValueError) as exc:
-                    st.error(str(exc))
-            upload = upload_col.file_uploader(
-                "Enviar material",
-                type=["mp4", "mov", "webm", "png", "jpg", "jpeg", "webp"],
-                key=f"upload-v3-{scene.index}",
-                label_visibility="collapsed",
-            )
-            if upload is not None and upload_col.button("Salvar upload", key=f"save-v3-{scene.index}", use_container_width=True):
-                record = library.add_bytes(
-                    scene_index=scene.index,
-                    data=upload.getvalue(),
-                    extension=Path(upload.name).suffix or ".png",
-                    source="upload",
-                    provider="human",
-                    prompt=edited,
-                    metadata={"original_name": upload.name},
-                )
-                library.set_status(record.id, "approved")
-                st.rerun()
-            for record in reversed(library.for_scene(scene.index)):
-                path = library.resolve(record)
-                if path.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"}:
-                    st.image(str(path), use_container_width=True)
-                elif path.suffix.lower() in {".mp4", ".mov", ".webm"}:
-                    st.video(str(path))
-                a, b = st.columns(2)
-                if a.button("⭐ Aprovar", key=f"approve-v3-{record.id}", disabled=record.status == "approved", use_container_width=True):
-                    library.set_status(record.id, "approved")
-                    st.rerun()
-                if b.button("Rejeitar", key=f"reject-v3-{record.id}", disabled=record.status == "rejected", use_container_width=True):
-                    library.set_status(record.id, "rejected")
-                    st.rerun()
+    result = render_creatives_step(
+        st,
+        package,
+        package_path,
+        WORKSPACE,
+    )
+    if result.action is CreativesAction.GO_TO_RENDER:
+        st.session_state[LOGICAL_STEP_KEY] = "render"
+        st.rerun()
+    elif result.action is CreativesAction.RERUN:
+        st.rerun()
 
 
 def render_output(package_path: Path) -> None:
@@ -214,13 +169,28 @@ def render_output(package_path: Path) -> None:
         try:
             with st.spinner("Renderizando..."):
                 video = (
-                    render_video_with_voice(package_path, burn_captions=burn, music_level_db=music, narration_gain_db=voice_gain)
+                    render_video_with_voice(
+                        package_path,
+                        burn_captions=burn,
+                        music_level_db=music,
+                        narration_gain_db=voice_gain,
+                    )
                     if voice_plan
-                    else render_video(package_path, burn_captions=burn, music_level_db=music)
+                    else render_video(
+                        package_path,
+                        burn_captions=burn,
+                        music_level_db=music,
+                    )
                 )
             if video.exists():
                 st.video(str(video))
-                st.download_button("Baixar vídeo final", video.read_bytes(), "video-final.mp4", "video/mp4", use_container_width=True)
+                st.download_button(
+                    "Baixar vídeo final",
+                    video.read_bytes(),
+                    "video-final.mp4",
+                    "video/mp4",
+                    use_container_width=True,
+                )
         except RenderError as exc:
             st.error(str(exc))
 
@@ -231,11 +201,22 @@ def render_publication(package) -> None:
         st.warning("Crie o roteiro primeiro.")
         return
     title = st.text_input("Título", value=package.hook)
-    caption = st.text_area("Legenda", value=f"{package.thesis}\n\n{package.brief.cta}", height=180)
-    hashtags = st.text_input("Hashtags", value="#fisioterapia #inteligenciaartificial #inovacaoemsaude")
+    caption = st.text_area(
+        "Legenda",
+        value=f"{package.thesis}\n\n{package.brief.cta}",
+        height=180,
+    )
+    hashtags = st.text_input(
+        "Hashtags",
+        value="#fisioterapia #inteligenciaartificial #inovacaoemsaude",
+    )
     st.download_button(
         "Baixar pacote de publicação",
-        json.dumps({"title": title, "caption": caption, "hashtags": hashtags}, ensure_ascii=False, indent=2),
+        json.dumps(
+            {"title": title, "caption": caption, "hashtags": hashtags},
+            ensure_ascii=False,
+            indent=2,
+        ),
         "publication-package.json",
         "application/json",
         use_container_width=True,
