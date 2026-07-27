@@ -27,14 +27,14 @@ from virallab.studio.state import (
     initialize_state as initialize_session_state,
     reset_project,
 )
-from virallab.studio.steps import AnalysisAction, AvatarAction
+from virallab.studio.steps import AnalysisAction, AvatarAction, VoiceAction
 from virallab.studio.steps.analysis import render_analysis as render_analysis_step
 from virallab.studio.steps.avatar import render_avatar as render_avatar_step
 from virallab.studio.steps.script import render_script as render_script_step
 from virallab.studio.steps.strategy import render_strategy as render_strategy_step
+from virallab.studio.steps.voice import render_voice as render_voice_step
 from virallab.voice import load_voice_plan
 from virallab.voice_renderer import render_video_with_voice
-from virallab.voice_ui import render_voice as render_voice_engine
 
 APP_ROOT = DEFAULT_PATHS.app_root
 WORKSPACE = DEFAULT_PATHS.workspace
@@ -121,7 +121,19 @@ def render_avatar() -> None:
 
 
 def render_voice(package, package_path: Path) -> None:
-    render_voice_engine(st, package, package_path)
+    result = render_voice_step(
+        st,
+        package,
+        package_path,
+        state=st.session_state,
+    )
+    if result.last_generation is not None:
+        st.session_state["voice_last_generation"] = result.last_generation
+    if result.action is VoiceAction.GO_TO_CREATIVES:
+        st.session_state[LOGICAL_STEP_KEY] = "creatives"
+        st.rerun()
+    elif result.action is VoiceAction.RERUN:
+        st.rerun()
 
 
 def render_creatives(package, package_path: Path) -> None:
@@ -233,7 +245,7 @@ def render_publication(package) -> None:
 def render_learning(package) -> None:
     st.subheader("Aprendizado")
     if package is None:
-        st.warning("Crie um roteiro primeiro.")
+        st.warning("Crie o roteiro primeiro.")
         return
     rating = st.slider("Qualidade", 1, 10, 8)
     approved = st.checkbox("Eu publicaria", value=True)
