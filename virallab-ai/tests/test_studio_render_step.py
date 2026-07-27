@@ -31,7 +31,9 @@ class FakeStreamlit:
     def slider(self, _label, _minimum, _maximum, value, **_kwargs):
         return value
 
-    def button(self, label, **_kwargs):
+    def button(self, label, **kwargs):
+        if kwargs.get("disabled", False):
+            return False
         return self.buttons.get(label, False)
 
     def spinner(self, *_args, **_kwargs):
