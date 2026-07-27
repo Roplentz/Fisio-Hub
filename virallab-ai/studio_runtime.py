@@ -16,21 +16,27 @@ from virallab.learning import FeedbackRecord, load_feedback, save_feedback, summ
 from virallab.models import VideoBrief
 from virallab.providers import select_provider
 from virallab.renderer import RenderError, render_video
+from virallab.studio.navigation import (
+    progress_value as navigation_progress_value,
+    render_step_selector as navigation_step_selector,
+)
+from virallab.studio.paths import DEFAULT_PATHS
+from virallab.studio.state import (
+    LOGICAL_STEP_KEY,
+    initialize_state as initialize_session_state,
+    reset_project,
+)
 from virallab.url_ingest import URLIngestError, download_video_url
 from virallab.voice import load_voice_plan
 from virallab.voice_renderer import render_video_with_voice
 from virallab.voice_ui import render_voice as render_voice_engine
 
-APP_ROOT = Path(__file__).resolve().parent
-WORKSPACE = APP_ROOT / "workspace"
-ANALYSIS_DIR = WORKSPACE / "analysis"
-PROJECTS_DIR = WORKSPACE / "projects"
-LEARNING_STORE = WORKSPACE / "learning" / "feedback.jsonl"
-LOGICAL_STEP_KEY = "studio_step"
-WIDGET_STEP_KEY = "_studio_step_selector"
-
-for directory in (WORKSPACE, ANALYSIS_DIR, PROJECTS_DIR, LEARNING_STORE.parent):
-    directory.mkdir(parents=True, exist_ok=True)
+APP_ROOT = DEFAULT_PATHS.app_root
+WORKSPACE = DEFAULT_PATHS.workspace
+ANALYSIS_DIR = DEFAULT_PATHS.analysis
+PROJECTS_DIR = DEFAULT_PATHS.projects
+LEARNING_STORE = DEFAULT_PATHS.learning_store
+DEFAULT_PATHS.ensure_directories()
 
 st.set_page_config(
     page_title="RP ViralLab Studio 3.0",
@@ -60,67 +66,21 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-STEPS = {
-    "analysis": "01 · Analisar vídeo",
-    "strategy": "02 · Estratégia",
-    "script": "03 · Roteiro",
-    "avatar": "04 · Avatar IA",
-    "voice": "05 · Voz",
-    "creatives": "06 · Criativos",
-    "render": "07 · Render",
-    "publication": "08 · Publicação",
-    "learning": "09 · Aprendizado",
-}
-
 
 def initialize_state() -> None:
-    defaults = {
-        "project_id": uuid.uuid4().hex[:10],
-        "package": None,
-        "package_dir": None,
-        "preferred_hook": "",
-        LOGICAL_STEP_KEY: "analysis",
-        WIDGET_STEP_KEY: "analysis",
-        "pending_video_path": None,
-        "pending_video_name": None,
-        "pending_video_source": None,
-        "avatar_candidate": None,
-    }
-    for key, value in defaults.items():
-        st.session_state.setdefault(key, value)
-
-
-def sync_step_from_widget() -> None:
-    st.session_state[LOGICAL_STEP_KEY] = st.session_state[WIDGET_STEP_KEY]
+    initialize_session_state(st.session_state)
 
 
 def render_step_selector() -> str:
-    logical_step = st.session_state[LOGICAL_STEP_KEY]
-    if st.session_state.get(WIDGET_STEP_KEY) != logical_step:
-        st.session_state[WIDGET_STEP_KEY] = logical_step
-
-    selected = st.selectbox(
-        "Etapa do projeto",
-        options=list(STEPS),
-        format_func=lambda key: STEPS[key],
-        key=WIDGET_STEP_KEY,
-        on_change=sync_step_from_widget,
-    )
-    st.session_state[LOGICAL_STEP_KEY] = selected
-    return selected
+    return navigation_step_selector(st, st.session_state)
 
 
 def project_dir(project_id: str) -> Path:
-    return PROJECTS_DIR / project_id
+    return DEFAULT_PATHS.project_dir(project_id)
 
 
 def new_project() -> None:
-    st.session_state.project_id = uuid.uuid4().hex[:10]
-    st.session_state.package = None
-    st.session_state.package_dir = None
-    st.session_state.preferred_hook = ""
-    st.session_state[LOGICAL_STEP_KEY] = "analysis"
-    st.session_state.avatar_candidate = None
+    reset_project(st.session_state)
 
 
 def save_uploaded_file(uploaded_file, destination: Path) -> Path:
@@ -137,8 +97,7 @@ def open_analysis(path: Path, name: str, source: str) -> None:
 
 
 def progress_value() -> float:
-    index = list(STEPS).index(st.session_state[LOGICAL_STEP_KEY])
-    return (index + 1) / len(STEPS)
+    return navigation_progress_value(st.session_state)
 
 
 def render_analysis() -> None:
@@ -238,7 +197,6 @@ def render_avatar() -> None:
     st.subheader("Avatar IA — Imagem Mestre")
     st.caption("Envie apenas três fotos recentes. A Imagem Mestre será aprovada por você antes de ser usada nos criativos.")
     st.info("Boa iluminação, fundo neutro, rosto visível, sem boné ou óculos escuros e expressão neutra.")
-
     if profile and profile.approved and profile.master_image_path:
         st.success(f"Imagem Mestre ativa · versão {profile.version}")
         st.image(profile.master_image_path, caption=f"{profile.name} · {profile.role}", use_container_width=True)
@@ -251,7 +209,6 @@ def render_avatar() -> None:
             st.session_state[LOGICAL_STEP_KEY] = "voice"
             st.rerun()
         return
-
     name = st.text_input("Nome do avatar", value=profile.name if profile else "Prof. Dr. Rodrigo Plentz")
     role = st.text_input("Papel", value=profile.role if profile else "Autor e especialista")
     notes = st.text_area(
@@ -264,7 +221,6 @@ def render_avatar() -> None:
     right_photo = right.file_uploader("Lado direito", type=["png", "jpg", "jpeg", "webp"], key="avatar-right")
     consent = st.checkbox("Confirmo que as fotos são minhas e autorizo seu uso para criar minha Imagem Mestre.")
     complete = all((front_photo, left_photo, right_photo)) and consent
-
     if st.button("Salvar fotos e criar Imagem Mestre", type="primary", use_container_width=True, disabled=not complete):
         try:
             store.save_references(
@@ -284,7 +240,6 @@ def render_avatar() -> None:
             st.rerun()
         except (ValueError, ImageGenerationError) as exc:
             st.error(str(exc))
-
     candidate_path = Path(st.session_state.avatar_candidate) if st.session_state.avatar_candidate else None
     if candidate_path and candidate_path.exists():
         st.markdown("### Candidata à Imagem Mestre")
