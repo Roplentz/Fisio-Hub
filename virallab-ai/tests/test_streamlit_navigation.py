@@ -2,6 +2,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+RUNTIME_PATH = ROOT / "studio_runtime.py"
 
 
 def test_entrypoint_does_not_patch_streamlit_selectbox() -> None:
@@ -13,7 +14,7 @@ def test_entrypoint_does_not_patch_streamlit_selectbox() -> None:
 
 
 def test_studio_uses_separate_logical_and_widget_keys() -> None:
-    source = (ROOT / "app_v3.py").read_text(encoding="utf-8")
+    source = RUNTIME_PATH.read_text(encoding="utf-8")
 
     assert 'LOGICAL_STEP_KEY = "studio_step"' in source
     assert 'WIDGET_STEP_KEY = "_studio_step_selector"' in source
@@ -23,7 +24,7 @@ def test_studio_uses_separate_logical_and_widget_keys() -> None:
 
 
 def test_continue_actions_change_only_the_logical_route() -> None:
-    source = (ROOT / "app_v3.py").read_text(encoding="utf-8")
+    source = RUNTIME_PATH.read_text(encoding="utf-8")
 
     assert 'st.session_state[LOGICAL_STEP_KEY] = "strategy"' in source
     assert 'st.session_state[LOGICAL_STEP_KEY] = "script"' in source
