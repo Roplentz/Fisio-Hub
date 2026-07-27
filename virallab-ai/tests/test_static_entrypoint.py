@@ -11,4 +11,5 @@ def test_entrypoint_does_not_execute_dynamic_source() -> None:
     assert "compile(" not in source
     assert "read_text(" not in source
     assert "studio_source_patch" not in source
-    assert "import app_v3" in source
+    assert "from app_v3 import main" in source
+    assert "main()" in source
