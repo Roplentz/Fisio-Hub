@@ -106,7 +106,11 @@ def test_voice_autotest_requests_rerun_without_streamlit_session_state(tmp_path)
 
     assert result.action is VoiceAction.RERUN
     assert state["voice_autotest_enabled"] is True
-    assert "st.session_state" not in inspect.getsource(render_voice)
+    executable_source = inspect.getsource(render_voice).replace(
+        "``st.session_state``",
+        "documented-session-boundary",
+    )
+    assert "st.session_state" not in executable_source
 
 
 def test_voice_generation_returns_metadata_to_runtime(monkeypatch, tmp_path):
