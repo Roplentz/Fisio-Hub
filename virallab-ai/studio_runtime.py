@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import html
 import json
-import shutil
-import uuid
 from pathlib import Path
 
 import streamlit as st
@@ -11,10 +9,7 @@ import streamlit as st
 from virallab.asset_library import AssetLibrary
 from virallab.avatar_master import AvatarMasterStore, ImageGenerationError
 from virallab.creative_assets import build_scene_prompt, generate_scene_asset
-from virallab.generator import export_package, generate_video_package
 from virallab.learning import FeedbackRecord, load_feedback, save_feedback, summarize_preferences
-from virallab.models import VideoBrief
-from virallab.providers import select_provider
 from virallab.renderer import RenderError, render_video
 from virallab.studio.layout import (
     configure_page,
@@ -33,7 +28,9 @@ from virallab.studio.state import (
     initialize_state as initialize_session_state,
     reset_project,
 )
-from virallab.url_ingest import URLIngestError, download_video_url
+from virallab.studio.steps import AnalysisAction
+from virallab.studio.steps.analysis import render_analysis as render_analysis_step
+from virallab.studio.steps.strategy import render_strategy as render_strategy_step
 from virallab.voice import load_voice_plan
 from virallab.voice_renderer import render_video_with_voice
 from virallab.voice_ui import render_voice as render_voice_engine
@@ -63,12 +60,6 @@ def new_project() -> None:
     reset_project(st.session_state)
 
 
-def save_uploaded_file(uploaded_file, destination: Path) -> Path:
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_bytes(uploaded_file.getbuffer())
-    return destination
-
-
 def open_analysis(path: Path, name: str, source: str) -> None:
     st.session_state.pending_video_path = str(path)
     st.session_state.pending_video_name = name
@@ -81,67 +72,25 @@ def progress_value() -> float:
 
 
 def render_analysis() -> None:
-    st.subheader("Analisar vídeo")
-    st.caption("Use uma referência para entender estrutura, hook, ritmo e CTA — sem copiar literalmente.")
-    upload_tab, url_tab = st.tabs(["📁 Enviar vídeo", "🔗 Importar URL"])
-    with upload_tab:
-        uploaded = st.file_uploader("Vídeo", type=["mp4", "mov", "m4v", "webm", "mkv"], key="v3-analysis-upload")
-        if uploaded is not None:
-            st.video(uploaded.getvalue())
-            if st.button("Analisar este vídeo →", type="primary", use_container_width=True):
-                suffix = Path(uploaded.name).suffix or ".mp4"
-                path = save_uploaded_file(uploaded, ANALYSIS_DIR / f"{uuid.uuid4().hex[:10]}{suffix}")
-                open_analysis(path, uploaded.name, "upload")
-    with url_tab:
-        url = st.text_input("URL pública", key="v3-analysis-url")
-        if st.button("Importar e analisar →", disabled=not url.strip(), use_container_width=True):
-            try:
-                imported = download_video_url(url, ANALYSIS_DIR / "urls")
-                open_analysis(imported.path, imported.title, imported.source_url)
-            except URLIngestError as exc:
-                st.error(str(exc))
-    st.divider()
-    if st.button("✨ Criar do zero, sem vídeo", use_container_width=True):
+    action = render_analysis_step(st, ANALYSIS_DIR, open_analysis)
+    if action is AnalysisAction.CREATE_FROM_SCRATCH:
         st.session_state[LOGICAL_STEP_KEY] = "strategy"
         st.rerun()
 
 
 def render_strategy() -> None:
-    st.subheader("Estratégia")
-    left, right = st.columns(2, gap="large")
-    with left:
-        theme = st.text_input("Tema", value="IA na fisioterapia")
-        audience = st.text_input("Público", value="fisioterapeutas brasileiros")
-        objective = st.selectbox("Objetivo", ["ganhar seguidores qualificados", "educar", "gerar autoridade", "vender", "engajar"])
-        duration = st.slider("Duração", 15, 90, 60, 5)
-    with right:
-        fmt = st.selectbox("Formato", ["professor_cinematico", "lista_demonstrativa", "narrativo", "tutorial", "case_clinico"])
-        evidence = st.selectbox("Base", ["educacional", "cientifico", "opiniao"])
-        provider_name = st.selectbox("Motor de IA", ["auto", "gemini", "ollama", "local"])
-        cta = st.text_area("CTA", value="Siga o Professor RP para aprender IA aplicada à saúde.")
-    if st.button("Gerar roteiro e storyboard →", type="primary", use_container_width=True):
-        try:
-            brief = VideoBrief(
-                theme=theme,
-                objective=objective,
-                audience=audience,
-                duration_seconds=duration,
-                format=fmt,
-                cta=cta,
-                evidence_level=evidence,
-            )
-            package = generate_video_package(brief, provider=select_provider(provider_name))
-            out = project_dir(st.session_state.project_id)
-            if out.exists():
-                shutil.rmtree(out)
-            export_package(package, out)
-            st.session_state.package = package
-            st.session_state.package_dir = str(out)
-            st.session_state.preferred_hook = package.hook
-            st.session_state[LOGICAL_STEP_KEY] = "script"
-            st.rerun()
-        except Exception as exc:
-            st.error(f"Não foi possível gerar: {exc}")
+    result = render_strategy_step(
+        st,
+        project_id=st.session_state.project_id,
+        project_dir_factory=project_dir,
+    )
+    if result is None:
+        return
+    st.session_state.package = result.package
+    st.session_state.package_dir = str(result.output_directory)
+    st.session_state.preferred_hook = result.package.hook
+    st.session_state[LOGICAL_STEP_KEY] = "script"
+    st.rerun()
 
 
 def render_scene_cards(package) -> None:
