@@ -16,6 +16,13 @@ from virallab.learning import FeedbackRecord, load_feedback, save_feedback, summ
 from virallab.models import VideoBrief
 from virallab.providers import select_provider
 from virallab.renderer import RenderError, render_video
+from virallab.studio.layout import (
+    configure_page,
+    render_footer,
+    render_hero,
+    render_progress,
+    render_sidebar,
+)
 from virallab.studio.navigation import (
     progress_value as navigation_progress_value,
     render_step_selector as navigation_step_selector,
@@ -37,34 +44,7 @@ ANALYSIS_DIR = DEFAULT_PATHS.analysis
 PROJECTS_DIR = DEFAULT_PATHS.projects
 LEARNING_STORE = DEFAULT_PATHS.learning_store
 DEFAULT_PATHS.ensure_directories()
-
-st.set_page_config(
-    page_title="RP ViralLab Studio 3.0",
-    page_icon="◉",
-    layout="wide",
-    initial_sidebar_state="collapsed",
-)
-
-st.markdown(
-    """
-    <style>
-    :root{--bg:#061018;--panel:#0d1d28;--line:rgba(255,255,255,.10);--text:#f6f9fb;--muted:#91a6b4;--cyan:#45d6dc;--gold:#d8b56d}
-    .stApp{background:radial-gradient(circle at 85% 0%,rgba(69,214,220,.14),transparent 30%),var(--bg);color:var(--text)}
-    .block-container{max-width:1160px;padding-top:.8rem;padding-bottom:5rem}
-    [data-testid="stSidebar"]{background:linear-gradient(180deg,#08151e,#0b1b26);border-right:1px solid var(--line)}
-    .hero{padding:30px;border:1px solid var(--line);border-radius:26px;background:linear-gradient(135deg,rgba(20,45,59,.98),rgba(8,24,34,.97));margin-bottom:18px}
-    .hero h1{color:white;font-size:42px;line-height:1.08;letter-spacing:-2px;margin:.35rem 0}.hero p{color:#b3c4ce;margin:0;line-height:1.55}
-    .kicker{color:var(--cyan);font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}
-    .choice,.scene-card,.status-card{padding:18px;border-radius:18px;border:1px solid var(--line);background:rgba(13,29,40,.92);margin-bottom:10px}
-    .choice h3{margin:.15rem 0 .35rem;color:white}.choice p{color:var(--muted);margin:0}
-    .scene-head{display:flex;justify-content:space-between;gap:10px;color:white;font-weight:800}.scene-label{margin-top:9px;color:var(--muted);font-size:10px;font-weight:800;text-transform:uppercase}.scene-text{color:#d8e5ea;font-size:13px;margin-top:3px}
-    .stButton>button,.stDownloadButton>button{min-height:50px;border-radius:13px;font-weight:800}
-    div[data-baseweb="select"]>div{min-height:52px;border-radius:14px}
-    @media(max-width:720px){.block-container{padding:.45rem .75rem 6rem}.hero{padding:18px;border-radius:19px}.hero h1{font-size:27px;letter-spacing:-1px}.hero p{font-size:14px}[data-testid="column"]{min-width:100%!important}.scene-head{display:block}h1,h2,h3{overflow-wrap:anywhere}}
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+configure_page(st)
 
 
 def initialize_state() -> None:
@@ -398,21 +378,9 @@ def render_learning(package) -> None:
 initialize_state()
 records = load_feedback(LEARNING_STORE)
 summary = summarize_preferences(records)
-
-with st.sidebar:
-    st.markdown("## ◉ RP ViralLab 3.0")
-    st.caption("Estúdio de conteúdo com memória")
-    st.code(st.session_state.project_id)
-    if st.button("＋ Novo projeto", use_container_width=True):
-        new_project()
-        st.rerun()
-    st.metric("Taxa de aprovação", f"{summary['approval_rate']}%")
-
-st.markdown(
-    '<section class="hero"><div class="kicker">Estúdio inteligente de conteúdo</div><h1>RP ViralLab Studio 3.0</h1><p>Analisar vídeo → estratégia → roteiro → Avatar IA → voz → criativos → render → publicação → aprendizado.</p></section>',
-    unsafe_allow_html=True,
-)
-st.progress(progress_value())
+render_sidebar(st, st.session_state, summary, new_project)
+render_hero(st)
+render_progress(st, progress_value())
 
 selected = render_step_selector()
 package = st.session_state.package
@@ -437,4 +405,4 @@ elif selected == "publication":
 else:
     render_learning(package)
 
-st.caption("RP ViralLab Studio 3.0 · Identidade autorizada, conteúdo original e revisão humana.")
+render_footer(st)
