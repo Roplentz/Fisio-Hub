@@ -5,9 +5,7 @@ from pathlib import Path
 
 import streamlit as st
 
-from virallab.asset_library import AssetLibrary
 from virallab.learning import FeedbackRecord, load_feedback, save_feedback, summarize_preferences
-from virallab.renderer import RenderError, render_video
 from virallab.studio.layout import (
     configure_page,
     render_footer,
@@ -29,16 +27,16 @@ from virallab.studio.steps import (
     AnalysisAction,
     AvatarAction,
     CreativesAction,
+    RenderAction,
     VoiceAction,
 )
 from virallab.studio.steps.analysis import render_analysis as render_analysis_step
 from virallab.studio.steps.avatar import render_avatar as render_avatar_step
 from virallab.studio.steps.creatives import render_creatives as render_creatives_step
+from virallab.studio.steps.render import render_output as render_output_step
 from virallab.studio.steps.script import render_script as render_script_step
 from virallab.studio.steps.strategy import render_strategy as render_strategy_step
 from virallab.studio.steps.voice import render_voice as render_voice_step
-from virallab.voice import load_voice_plan
-from virallab.voice_renderer import render_video_with_voice
 
 APP_ROOT = DEFAULT_PATHS.app_root
 WORKSPACE = DEFAULT_PATHS.workspace
@@ -155,44 +153,10 @@ def render_creatives(package, package_path: Path) -> None:
 
 
 def render_output(package_path: Path) -> None:
-    st.subheader("Render")
-    library = AssetLibrary(package_path)
-    approved = [item for item in library.load() if item.status == "approved"]
-    voice_plan = load_voice_plan(package_path)
-    c1, c2 = st.columns(2)
-    c1.metric("Criativos aprovados", len(approved))
-    c2.metric("Voz", "Pronta" if voice_plan else "Não gravada")
-    burn = st.checkbox("Legendas incorporadas", value=True)
-    music = st.slider("Trilha (dB)", -40, -12, -25)
-    voice_gain = st.slider("Voz (dB)", -6, 6, 0)
-    if st.button("Renderizar vídeo", type="primary", use_container_width=True, disabled=not approved):
-        try:
-            with st.spinner("Renderizando..."):
-                video = (
-                    render_video_with_voice(
-                        package_path,
-                        burn_captions=burn,
-                        music_level_db=music,
-                        narration_gain_db=voice_gain,
-                    )
-                    if voice_plan
-                    else render_video(
-                        package_path,
-                        burn_captions=burn,
-                        music_level_db=music,
-                    )
-                )
-            if video.exists():
-                st.video(str(video))
-                st.download_button(
-                    "Baixar vídeo final",
-                    video.read_bytes(),
-                    "video-final.mp4",
-                    "video/mp4",
-                    use_container_width=True,
-                )
-        except RenderError as exc:
-            st.error(str(exc))
+    result = render_output_step(st, package_path)
+    if result.action is RenderAction.GO_TO_PUBLICATION:
+        st.session_state[LOGICAL_STEP_KEY] = "publication"
+        st.rerun()
 
 
 def render_publication(package) -> None:
