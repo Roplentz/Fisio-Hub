@@ -1,23 +1,17 @@
-"""Fachada explícita do RP ViralLab Studio 3.0.
+"""Fachada pública do RP ViralLab Studio 3.0.
 
-Importar este módulo não renderiza a interface. O runtime do Streamlit só é
-carregado quando :func:`main` é chamado pelo entrypoint oficial.
+Importar este módulo não renderiza a interface. O entrypoint oficial chama
+:func:`main`, que delega a inicialização ao pacote modular ``virallab.studio``.
 """
 
 from __future__ import annotations
 
-import importlib
-import sys
-
-_RUNTIME_MODULE = "studio_runtime"
+from virallab.studio import run_studio
 
 
 def main() -> None:
-    """Carrega o runtime do Studio exatamente uma vez por execução."""
-    if _RUNTIME_MODULE in sys.modules:
-        importlib.reload(sys.modules[_RUNTIME_MODULE])
-    else:
-        importlib.import_module(_RUNTIME_MODULE)
+    """Executa o Studio por meio da fronteira modular da aplicação."""
+    run_studio()
 
 
 __all__ = ["main"]
