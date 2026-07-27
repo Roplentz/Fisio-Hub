@@ -54,7 +54,18 @@ jobs:
         run: python -m compileall -q app.py app_v3.py pages src tests
 
       - name: Ruff critical-error scan
-        run: ruff check app.py app_v3.py pages src tests --select E9,F63,F7,F82
+        run: |
+          set -o pipefail
+          ruff check app.py app_v3.py pages src tests --select E9,F63,F7,F82 | tee ruff-report.txt
+
+      - name: Upload ruff report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: virallab-ruff-report
+          path: virallab-ai/ruff-report.txt
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Run automated tests
         run: pytest -q --junitxml=pytest-report.xml
