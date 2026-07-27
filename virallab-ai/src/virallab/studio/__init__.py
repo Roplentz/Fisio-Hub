@@ -1,10 +1,15 @@
-"""Núcleo modular do RP ViralLab Studio.
-
-A API pública deste pacote expõe somente :func:`run_studio`. As etapas da
-interface serão migradas gradualmente para este namespace sem alterar o
-entrypoint externo.
-"""
+"""Núcleo modular do RP ViralLab Studio."""
 
 from .application import run_studio
+from .navigation import STEPS
+from .paths import DEFAULT_PATHS, StudioPaths
+from .state import LOGICAL_STEP_KEY, WIDGET_STEP_KEY
 
-__all__ = ["run_studio"]
+__all__ = [
+    "DEFAULT_PATHS",
+    "LOGICAL_STEP_KEY",
+    "STEPS",
+    "StudioPaths",
+    "WIDGET_STEP_KEY",
+    "run_studio",
+]
