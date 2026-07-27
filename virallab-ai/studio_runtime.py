@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import html
 import json
 from pathlib import Path
 
@@ -28,8 +27,10 @@ from virallab.studio.state import (
     initialize_state as initialize_session_state,
     reset_project,
 )
-from virallab.studio.steps import AnalysisAction
+from virallab.studio.steps import AnalysisAction, AvatarAction
 from virallab.studio.steps.analysis import render_analysis as render_analysis_step
+from virallab.studio.steps.avatar import render_avatar as render_avatar_step
+from virallab.studio.steps.script import render_script as render_script_step
 from virallab.studio.steps.strategy import render_strategy as render_strategy_step
 from virallab.voice import load_voice_plan
 from virallab.voice_renderer import render_video_with_voice
@@ -93,100 +94,30 @@ def render_strategy() -> None:
     st.rerun()
 
 
-def render_scene_cards(package) -> None:
-    labels = {"avatar": "Autor", "title_card": "Impacto", "broll": "Apoio", "screen_capture": "Tela", "proof": "Prova"}
-    for scene in package.scenes:
-        st.markdown(
-            f'<div class="scene-card"><div class="scene-head"><span>Cena {scene.index} · {labels.get(scene.scene_type, scene.scene_type)}</span><span>{scene.start:.1f}–{scene.end:.1f}s</span></div><div class="scene-label">Narração</div><div class="scene-text">{html.escape(scene.narration or "—")}</div><div class="scene-label">Texto na tela</div><div class="scene-text">{html.escape(scene.on_screen_text or "—")}</div><div class="scene-label">Direção visual</div><div class="scene-text">{html.escape(scene.visual_direction or "—")}</div></div>',
-            unsafe_allow_html=True,
-        )
-
-
 def render_script(package) -> None:
-    st.subheader("Roteiro")
-    st.metric("Cenas", len(package.scenes))
-    st.session_state.preferred_hook = st.text_area("Gancho", value=st.session_state.preferred_hook or package.hook)
-    st.markdown(f"**Tese:** {package.thesis}")
-    render_scene_cards(package)
-    st.download_button(
-        "Baixar roteiro",
-        json.dumps(package.to_dict(), ensure_ascii=False, indent=2),
-        "video-package.json",
-        "application/json",
-        use_container_width=True,
+    result = render_script_step(
+        st,
+        package,
+        preferred_hook=st.session_state.preferred_hook,
     )
-    if st.button("Continuar para Avatar IA →", type="primary", use_container_width=True):
+    st.session_state.preferred_hook = result.preferred_hook
+    if result.continue_to_avatar:
         st.session_state[LOGICAL_STEP_KEY] = "avatar"
         st.rerun()
 
 
 def render_avatar() -> None:
-    store = AvatarMasterStore(WORKSPACE)
-    profile = store.load()
-    st.subheader("Avatar IA — Imagem Mestre")
-    st.caption("Envie apenas três fotos recentes. A Imagem Mestre será aprovada por você antes de ser usada nos criativos.")
-    st.info("Boa iluminação, fundo neutro, rosto visível, sem boné ou óculos escuros e expressão neutra.")
-    if profile and profile.approved and profile.master_image_path:
-        st.success(f"Imagem Mestre ativa · versão {profile.version}")
-        st.image(profile.master_image_path, caption=f"{profile.name} · {profile.role}", use_container_width=True)
-        c1, c2 = st.columns(2)
-        if c1.button("Substituir as três fotos", use_container_width=True):
-            store.delete()
-            st.session_state.avatar_candidate = None
-            st.rerun()
-        if c2.button("Continuar para Voz →", type="primary", use_container_width=True):
-            st.session_state[LOGICAL_STEP_KEY] = "voice"
-            st.rerun()
-        return
-    name = st.text_input("Nome do avatar", value=profile.name if profile else "Prof. Dr. Rodrigo Plentz")
-    role = st.text_input("Papel", value=profile.role if profile else "Autor e especialista")
-    notes = st.text_area(
-        "Diretrizes visuais",
-        value=profile.visual_notes if profile else "Aparência profissional, segura e acolhedora; preservar rosto, cabelo e idade aparente.",
-    )
-    front, left, right = st.columns(3)
-    front_photo = front.file_uploader("Foto de frente", type=["png", "jpg", "jpeg", "webp"], key="avatar-front")
-    left_photo = left.file_uploader("Lado esquerdo", type=["png", "jpg", "jpeg", "webp"], key="avatar-left")
-    right_photo = right.file_uploader("Lado direito", type=["png", "jpg", "jpeg", "webp"], key="avatar-right")
-    consent = st.checkbox("Confirmo que as fotos são minhas e autorizo seu uso para criar minha Imagem Mestre.")
-    complete = all((front_photo, left_photo, right_photo)) and consent
-    if st.button("Salvar fotos e criar Imagem Mestre", type="primary", use_container_width=True, disabled=not complete):
-        try:
-            store.save_references(
-                name=name,
-                role=role,
-                photos={
-                    "front": (front_photo.getvalue(), front_photo.name, front_photo.type),
-                    "left": (left_photo.getvalue(), left_photo.name, left_photo.type),
-                    "right": (right_photo.getvalue(), right_photo.name, right_photo.type),
-                },
-                visual_notes=notes,
-                consent_confirmed=consent,
-            )
-            with st.spinner("Criando a Imagem Mestre a partir dos três ângulos..."):
-                candidate = store.generate_candidate()
-            st.session_state.avatar_candidate = str(candidate)
-            st.rerun()
-        except (ValueError, ImageGenerationError) as exc:
-            st.error(str(exc))
-    candidate_path = Path(st.session_state.avatar_candidate) if st.session_state.avatar_candidate else None
-    if candidate_path and candidate_path.exists():
-        st.markdown("### Candidata à Imagem Mestre")
-        st.image(str(candidate_path), use_container_width=True)
-        approve, regenerate = st.columns(2)
-        if approve.button("✓ Aprovar Imagem Mestre", type="primary", use_container_width=True):
-            store.approve_candidate(candidate_path)
-            st.session_state.avatar_candidate = None
-            st.success("Imagem Mestre aprovada e ativada.")
-            st.rerun()
-        if regenerate.button("Gerar outra versão", use_container_width=True):
-            try:
-                with st.spinner("Gerando outra versão..."):
-                    candidate = store.generate_candidate()
-                st.session_state.avatar_candidate = str(candidate)
-                st.rerun()
-            except (ValueError, ImageGenerationError) as exc:
-                st.error(str(exc))
+    candidate = Path(st.session_state.avatar_candidate) if st.session_state.avatar_candidate else None
+    result = render_avatar_step(st, WORKSPACE, candidate_path=candidate)
+    if result.clear_candidate:
+        st.session_state.avatar_candidate = None
+    elif result.candidate_path is not None:
+        st.session_state.avatar_candidate = str(result.candidate_path)
+    if result.action is AvatarAction.GO_TO_VOICE:
+        st.session_state[LOGICAL_STEP_KEY] = "voice"
+        st.rerun()
+    elif result.action is AvatarAction.RERUN:
+        st.rerun()
 
 
 def render_voice(package, package_path: Path) -> None:
