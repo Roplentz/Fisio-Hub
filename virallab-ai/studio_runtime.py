@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import streamlit as st
 
-from virallab.learning import FeedbackRecord, load_feedback, save_feedback, summarize_preferences
+from virallab.learning import load_feedback, summarize_preferences
 from virallab.studio.layout import (
     configure_page,
     render_footer,
@@ -27,12 +26,17 @@ from virallab.studio.steps import (
     AnalysisAction,
     AvatarAction,
     CreativesAction,
+    PublicationAction,
     RenderAction,
     VoiceAction,
 )
 from virallab.studio.steps.analysis import render_analysis as render_analysis_step
 from virallab.studio.steps.avatar import render_avatar as render_avatar_step
 from virallab.studio.steps.creatives import render_creatives as render_creatives_step
+from virallab.studio.steps.learning import render_learning as render_learning_step
+from virallab.studio.steps.publication import (
+    render_publication as render_publication_step,
+)
 from virallab.studio.steps.render import render_output as render_output_step
 from virallab.studio.steps.script import render_script as render_script_step
 from virallab.studio.steps.strategy import render_strategy as render_strategy_step
@@ -109,7 +113,11 @@ def render_script(package) -> None:
 
 
 def render_avatar() -> None:
-    candidate = Path(st.session_state.avatar_candidate) if st.session_state.avatar_candidate else None
+    candidate = (
+        Path(st.session_state.avatar_candidate)
+        if st.session_state.avatar_candidate
+        else None
+    )
     result = render_avatar_step(st, WORKSPACE, candidate_path=candidate)
     if result.clear_candidate:
         st.session_state.avatar_candidate = None
@@ -160,56 +168,20 @@ def render_output(package_path: Path) -> None:
 
 
 def render_publication(package) -> None:
-    st.subheader("Pacote de publicação")
-    if package is None:
-        st.warning("Crie o roteiro primeiro.")
-        return
-    title = st.text_input("Título", value=package.hook)
-    caption = st.text_area(
-        "Legenda",
-        value=f"{package.thesis}\n\n{package.brief.cta}",
-        height=180,
-    )
-    hashtags = st.text_input(
-        "Hashtags",
-        value="#fisioterapia #inteligenciaartificial #inovacaoemsaude",
-    )
-    st.download_button(
-        "Baixar pacote de publicação",
-        json.dumps(
-            {"title": title, "caption": caption, "hashtags": hashtags},
-            ensure_ascii=False,
-            indent=2,
-        ),
-        "publication-package.json",
-        "application/json",
-        use_container_width=True,
-    )
+    result = render_publication_step(st, package)
+    if result.action is PublicationAction.GO_TO_LEARNING:
+        st.session_state[LOGICAL_STEP_KEY] = "learning"
+        st.rerun()
 
 
 def render_learning(package) -> None:
-    st.subheader("Aprendizado")
-    if package is None:
-        st.warning("Crie o roteiro primeiro.")
-        return
-    rating = st.slider("Qualidade", 1, 10, 8)
-    approved = st.checkbox("Eu publicaria", value=True)
-    notes = st.text_area("O que o ViralLab deve aprender?")
-    if st.button("Salvar aprendizado", type="primary", use_container_width=True):
-        save_feedback(
-            FeedbackRecord(
-                project_id=st.session_state.project_id,
-                theme=package.brief.theme,
-                rating=rating,
-                approved=approved,
-                original_hook=package.hook,
-                preferred_hook=st.session_state.preferred_hook or package.hook,
-                notes=notes,
-                preferred_style="Studio 3.0",
-            ),
-            LEARNING_STORE,
-        )
-        st.success("Aprendizado salvo.")
+    render_learning_step(
+        st,
+        package,
+        project_id=st.session_state.project_id,
+        preferred_hook=st.session_state.preferred_hook,
+        learning_store=LEARNING_STORE,
+    )
 
 
 initialize_state()
@@ -221,7 +193,9 @@ render_progress(st, progress_value())
 
 selected = render_step_selector()
 package = st.session_state.package
-package_path = Path(st.session_state.package_dir) if st.session_state.package_dir else None
+package_path = (
+    Path(st.session_state.package_dir) if st.session_state.package_dir else None
+)
 
 if selected == "analysis":
     render_analysis()
@@ -232,11 +206,21 @@ elif selected == "script":
 elif selected == "avatar":
     render_avatar()
 elif selected == "voice":
-    render_voice(package, package_path) if package and package_path else st.warning("Gere o roteiro primeiro.")
+    (
+        render_voice(package, package_path)
+        if package and package_path
+        else st.warning("Gere o roteiro primeiro.")
+    )
 elif selected == "creatives":
-    render_creatives(package, package_path) if package and package_path else st.warning("Gere o roteiro primeiro.")
+    (
+        render_creatives(package, package_path)
+        if package and package_path
+        else st.warning("Gere o roteiro primeiro.")
+    )
 elif selected == "render":
-    render_output(package_path) if package_path else st.warning("Crie o projeto primeiro.")
+    render_output(package_path) if package_path else st.warning(
+        "Crie o projeto primeiro."
+    )
 elif selected == "publication":
     render_publication(package)
 else:
