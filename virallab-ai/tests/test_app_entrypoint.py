@@ -7,5 +7,7 @@ def test_entrypoint_does_not_replace_streamlit_page_config() -> None:
 
     assert "st.set_page_config =" not in source
     assert "original_page_config" not in source
-    assert '"__file__": str(studio_path)' in source
+    assert "import app_v3" in source
+    assert "exec(" not in source
+    assert "studio_source_patch" not in source
     compile(source, str(app_path), "exec")
