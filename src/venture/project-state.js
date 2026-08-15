@@ -1,0 +1,55 @@
+export const createProjectState = (seed = {}) => ({
+  project_id: seed.project_id || crypto.randomUUID(),
+  project_name: seed.project_name || 'Novo projeto de inovação',
+  user_id: seed.user_id || null,
+  current_phase: 0,
+  status: 'active',
+  problem: {
+    statement: '',
+    context: '',
+    consequences: '',
+    frequency: '',
+    severity: '',
+    ...(seed.problem || {}),
+  },
+  audience: {
+    primary: '',
+    segments: [],
+    ...(seed.audience || {}),
+  },
+  jtbd: seed.jtbd || '',
+  facts: seed.facts || [],
+  evidence: seed.evidence || [],
+  assumptions: seed.assumptions || [],
+  unknowns: seed.unknowns || [],
+  risks: seed.risks || [],
+  opportunity_score: seed.opportunity_score || 0,
+  value_proposition: seed.value_proposition || '',
+  solutions: seed.solutions || [],
+  selected_solution: seed.selected_solution || '',
+  mvp: seed.mvp || {},
+  business_model: seed.business_model || {},
+  experiments: seed.experiments || [],
+  metrics: seed.metrics || [],
+  decisions: seed.decisions || [],
+  current_gate: seed.current_gate || 'PROBLEM_GATE',
+  gate_recommendation: seed.gate_recommendation || 'INVESTIGAR',
+  next_action: seed.next_action || 'Descreva o problema, ideia ou oportunidade em linguagem livre.',
+  source_text: seed.source_text || '',
+  updated_at: new Date().toISOString(),
+});
+
+export const mergeProjectUpdates = (state, updates = {}) => ({
+  ...state,
+  ...updates,
+  problem: { ...state.problem, ...(updates.problem || {}) },
+  audience: { ...state.audience, ...(updates.audience || {}) },
+  updated_at: new Date().toISOString(),
+});
+
+export const knowledgeCounts = (state) => ({
+  facts: state.facts?.length || 0,
+  evidence: state.evidence?.length || 0,
+  assumptions: state.assumptions?.length || 0,
+  risks: state.risks?.length || 0,
+});
