@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Brain, ChevronLeft, CircleAlert, CircleCheck, FlaskConical, Lightbulb, Save, Sparkles, Target } from 'lucide-react';
 import { applyValidatedAgentOutput, createProjectState, orchestrate } from './core.js';
-import { saveProject } from './repository.js';
+import { listProjects, saveProject } from './repository.js';
 import { supabase, persistenceMode } from '../lib/supabase.js';
 
 const steps = ['Problema','Usuário','Evidências','Oportunidade','Valor','Solução','MVP','Modelo','Experimento','Métricas','Pitch','Projeto final'];
@@ -16,6 +16,25 @@ export default function VentureWorkspace({ setPage }) {
   const [analysis, setAnalysis] = useState(null);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const projects = await listProjects(supabase);
+        const latest = projects?.[0];
+        if (mounted && latest?.project_id) {
+          setState(latest);
+          setInput(latest.problem?.context || '');
+          setSaved(true);
+        }
+      } finally {
+        if (mounted) setLoaded(true);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   const criticalRisk = state.risks[0] || 'Ainda não identificado';
   const progress = useMemo(() => Math.max(8, Math.min(100, state.opportunity_score)), [state.opportunity_score]);
@@ -27,7 +46,8 @@ export default function VentureWorkspace({ setPage }) {
       const next = applyValidatedAgentOutput(state, output);
       setAnalysis(output);
       setState(next);
-      await saveProject(next, supabase);
+      const persisted = await saveProject(next, supabase);
+      setState(persisted);
       setSaved(true);
     } finally {
       setBusy(false);
@@ -36,8 +56,13 @@ export default function VentureWorkspace({ setPage }) {
 
   async function persist() {
     setBusy(true);
-    try { await saveProject(state, supabase); setSaved(true); }
-    finally { setBusy(false); }
+    try {
+      const persisted = await saveProject(state, supabase);
+      setState(persisted);
+      setSaved(true);
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -57,25 +82,28 @@ export default function VentureWorkspace({ setPage }) {
       <section className="ventureMain">
         <header className="ventureHeader">
           <div><p className="eyebrow">FisioHub Innovation OS</p><h1>{state.project_name}</h1></div>
-          <div className="ventureHeaderActions"><Badge tone={persistenceMode === 'supabase' ? 'success' : 'neutral'}>{persistenceMode === 'supabase' ? 'Supabase conectado' : 'Persistência local'}</Badge><button className="btn ghost small" onClick={persist}><Save size={16}/>{saved ? 'Salvo' : 'Salvar'}</button></div>
+          <div className="ventureHeaderActions">
+            <Badge tone={persistenceMode === 'supabase' ? 'success' : 'neutral'}>{persistenceMode === 'supabase' ? 'Supabase disponível' : 'Persistência local'}</Badge>
+            <button className="btn ghost small" onClick={persist} disabled={busy}><Save size={16}/>{saved ? 'Salvo' : 'Salvar'}</button>
+          </div>
         </header>
 
         <div className="ventureGrid">
           <div className="ventureCanvas">
             <div className="ventureIntro">
               <Badge tone="blue"><Sparkles size={13}/> Discovery Agent</Badge>
-              <h2>O que está na sua cabeça?</h2>
+              <h2>{loaded ? 'O que está na sua cabeça?' : 'Carregando seu projeto…'}</h2>
               <p>Pode ser um problema, ideia, necessidade ou oportunidade. Explique como explicaria para um colega. O agente vai separar problema de solução e explicitar o que ainda é hipótese.</p>
-              <textarea value={input} onChange={e => setInput(e.target.value)} placeholder="Ex.: Pacientes recebem alta hospitalar com muitas orientações e frequentemente têm dificuldade para entender o que devem fazer em casa..." />
-              <div className="ventureActions"><button className="btn primary" disabled={busy || input.trim().length < 5} onClick={analyze}>{busy ? 'Analisando...' : 'Analisar oportunidade'} <Target size={17}/></button></div>
+              <textarea value={input} onChange={e => { setInput(e.target.value); setSaved(false); }} placeholder="Ex.: Pacientes recebem alta hospitalar com muitas orientações e frequentemente têm dificuldade para entender o que devem fazer em casa..." disabled={!loaded} />
+              <div className="ventureActions"><button className="btn primary" disabled={!loaded || busy || input.trim().length < 5} onClick={analyze}>{busy ? 'Analisando...' : 'Analisar oportunidade'} <Target size={17}/></button></div>
             </div>
 
-            {analysis && <div className="analysisCard">
+            {(analysis || state.problem?.statement) && <div className="analysisCard">
               <div className="analysisTitle"><Lightbulb size={20}/><div><small>Entendi assim</small><h3>{state.problem.statement || 'Problema em formulação'}</h3></div></div>
-              <p>{analysis.analysis}</p>
+              <p>{analysis?.analysis || 'Este Project State foi restaurado da persistência. Reanalise quando quiser atualizar o diagnóstico.'}</p>
               <div className="analysisColumns">
-                <div><b>Público</b><p>{state.audience.primary}</p></div>
-                <div><b>JTBD</b><p>{state.jtbd}</p></div>
+                <div><b>Público</b><p>{state.audience.primary || 'Ainda não definido'}</p></div>
+                <div><b>JTBD</b><p>{state.jtbd || 'Ainda não formulado'}</p></div>
               </div>
               <div className="hypothesisBox"><b>Hipóteses explícitas</b>{state.assumptions.slice(-4).map(item => <p key={item}><CircleAlert size={15}/>{item}</p>)}</div>
               <div className="gateRow"><div><small>Problem Gate</small><strong>{state.gate_status}</strong></div><div><small>Próxima melhor ação</small><strong>{state.next_action}</strong></div></div>
