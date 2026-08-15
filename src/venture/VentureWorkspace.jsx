@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Brain, ChevronLeft, CircleAlert, CircleCheck, FlaskConical, Lightbulb, Plus, Save, Sparkles, Target, Trash2, WandSparkles, Check } from 'lucide-react';
 import { addEvidence, applyValidatedAgentOutput, createProjectState, orchestrate, removeEvidence, selectSolution } from './core.js';
+import ProductArchitectPanel from './ProductArchitectPanel.jsx';
 import { listProjects, saveProject } from './repository.js';
 import { supabase, persistenceMode } from '../lib/supabase.js';
 
@@ -108,11 +109,11 @@ export default function VentureWorkspace({ setPage }) {
     <main className="ventureShell">
       <aside className="ventureJourney">
         <button className="ventureBack" onClick={() => setPage('student')}><ChevronLeft size={17}/> Voltar ao FisioHub</button>
-        <div className="ventureBrand"><Brain size={22}/><div><b>Venture Copilot</b><small>Sprint 4 · Opportunity Agent</small></div></div>
+        <div className="ventureBrand"><Brain size={22}/><div><b>Venture Copilot</b><small>Sprint 5 · Product Architect</small></div></div>
         <div className="journeyList">
           {steps.map((step, index) => {
-            const active = index <= 5;
-            const done = (index === 0 && state.problem?.statement) || (index === 2 && state.evidence?.length) || (index >= 3 && index <= 5 && state.selected_solution);
+            const active = index <= 7;
+            const done = (index === 0 && state.problem?.statement) || (index === 2 && state.evidence?.length) || (index >= 3 && index <= 5 && state.selected_solution) || (index >= 6 && index <= 7 && state.product_architecture);
             return <div key={step} className={`journeyStep ${active ? 'active' : ''} ${done ? 'done' : ''}`}><span>{index + 1}</span><p>{step}</p></div>;
           })}
         </div>
@@ -208,15 +209,18 @@ export default function VentureWorkspace({ setPage }) {
                 <div className="selectedSolutionGrid"><div><span>Tipo</span><b>{state.selected_solution.type}</b></div><div><span>Fit</span><b>{state.selected_solution.execution_fit}</b></div><div><span>Opportunity Gate</span><b>{state.opportunity_gate}</b></div></div>
               </div>}
             </section>
+
+            <ProductArchitectPanel state={state} busy={busy} commit={commit} setError={setError} setSaved={setSaved} />
           </div>
 
           <aside className="copilotPanel">
             <div className="copilotTop"><Brain size={20}/><div><b>Venture Copilot</b><small>Orchestrator ativo</small></div></div>
             <div className="scoreBox"><div><span>Innovation Score</span><b>{state.opportunity_score || 0}<small>/100</small></b></div><div className="scoreTrack"><i style={{width:`${progress}%`}}/></div><small>Indicador diagnóstico; não é validação científica.</small></div>
             <div className="scoreBreakdown"><p><span>Problema</span><b>{breakdown.problem || 0}/20</b></p><p><span>Evidência</span><b>{breakdown.evidence || 0}/20</b></p><p><span>Valor</span><b>{breakdown.value || 0}/20</b></p><p><span>Viabilidade</span><b>{breakdown.feasibility || 0}/20</b></p><p><span>Validação</span><b>{breakdown.validation || 0}/20</b></p></div>
-            <div className="copilotStat"><span>Fase atual</span><b>{state.selected_solution ? 'Solution selected' : 'Opportunity'}</b></div>
+            <div className="copilotStat"><span>Fase atual</span><b>{state.product_architecture ? 'MVP + PRD' : state.selected_solution ? 'Product Architecture' : 'Opportunity'}</b></div>
             <div className="copilotStat"><span>Problem Gate</span><b>{state.gate_status || 'INVESTIGATE'}</b></div>
             <div className="copilotStat"><span>Opportunity Gate</span><b>{state.opportunity_gate || 'LOCKED'}</b></div>
+            <div className="copilotStat"><span>MVP Gate</span><b>{state.product_gate || 'LOCKED'}</b></div>
             <div className="copilotMiniGrid"><div><b>{state.facts?.length || 0}</b><span>Fatos</span></div><div><b>{state.assumptions?.length || 0}</b><span>Hipóteses</span></div><div><b>{state.evidence?.length || 0}</b><span>Evidências</span></div></div>
             <div className="riskBox"><CircleAlert size={18}/><div><small>Risco principal</small><p>{criticalRisk}</p></div></div>
             <div className="nextBox"><FlaskConical size={18}/><div><small>Próxima ação</small><p>{state.next_action}</p></div></div>
