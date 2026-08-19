@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from .avatar import avatar_manifest
+from .clinical_intelligence import write_clinical_safety_report
 from .models import Scene, VideoBrief, VideoPackage
 from .providers import ScriptProvider, select_provider
 from .render_plan import build_render_plan
@@ -123,6 +124,7 @@ def export_package(package: VideoPackage, output_dir: str | Path) -> Path:
         json.dumps(build_render_plan(package), ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+    write_clinical_safety_report(package, out / "clinical-safety-report.json")
     return json_path
 
 
