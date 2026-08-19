@@ -5,7 +5,9 @@ import json
 from virallab.generator import export_package, generate_video_package
 from virallab.models import VideoBrief
 from virallab.providers import LocalRuleProvider
-from virallab.renderer import render_video
+from pathlib import Path
+
+from virallab.renderer import _concat_escape, render_video
 
 
 def test_renderer_dry_run_creates_concat_and_command_manifest(tmp_path):
@@ -62,3 +64,9 @@ def test_renderer_can_disable_burned_captions(tmp_path):
     )
 
     assert not any("subtitles=" in argument for argument in commands[-1])
+
+
+def test_concat_manifest_normalizes_windows_paths():
+    escaped = _concat_escape(Path(r"C:\Users\plent\video scene.mp4"))
+
+    assert escaped == "C:/Users/plent/video scene.mp4"
