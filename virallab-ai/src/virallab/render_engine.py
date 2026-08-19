@@ -23,6 +23,7 @@ class RenderJob:
     progress: int = 0
     output_file: str = ""
     error_code: str = ""
+    error_message: str = ""
     created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     started_at: str = ""
     finished_at: str = ""
@@ -57,6 +58,7 @@ class FFmpegVideoRenderer(VideoRenderer):
         except Exception as exc:
             job.state = "failed"
             job.error_code = type(exc).__name__
+            job.error_message = str(exc)[-1200:]
         finally:
             job.finished_at = datetime.now(timezone.utc).isoformat()
             self.write_report(job)
