@@ -7,6 +7,7 @@ from typing import Any
 from .asset_library import AssetLibrary, AssetRecord
 from .author_profile import AuthorProfile, AuthorProfileStore
 from .avatar_master import AvatarMasterProfile, AvatarMasterStore, avatar_prompt
+from .brand_kit import BrandKit
 from .image_provider import GeminiImageProvider, ImageGenerationError
 
 
@@ -26,6 +27,7 @@ def build_scene_prompt(
     visual_style: str = "RP cinematográfico",
     author_profile: AuthorProfile | None = None,
     avatar_profile: AvatarMasterProfile | None = None,
+    brand_kit: BrandKit | None = None,
 ) -> str:
     """Build a production-ready vertical-image prompt from a storyboard scene."""
     scene_type = str(getattr(scene, "scene_type", "broll"))
@@ -62,6 +64,12 @@ def build_scene_prompt(
         }
         base = type_rules.get(scene_type, type_rules["broll"])
 
+    brand_instruction = (
+        brand_kit.prompt_instruction()
+        if brand_kit
+        else f"Identidade visual: {visual_style}; paleta azul-petróleo, ciano discreto e tons neutros"
+    )
+
     prompt_parts = [
         base,
         f"Tema do conteúdo: {theme}." if theme else "",
@@ -70,7 +78,7 @@ def build_scene_prompt(
         f"Conceito do texto na tela: {on_screen}. Não escrever esse texto na imagem."
         if on_screen
         else "",
-        f"Identidade visual: {visual_style}; paleta azul-petróleo, ciano discreto e tons neutros; iluminação cinematográfica suave.",
+        f"{brand_instruction}; iluminação cinematográfica suave.",
         "Formato vertical 9:16, composição mobile-first, assunto principal centralizado, espaço seguro nas bordas para legendas.",
         "Alta qualidade, aparência humana natural, mãos anatomicamente corretas, sem texto ilegível, sem marca-d'água, sem logotipos.",
     ]
