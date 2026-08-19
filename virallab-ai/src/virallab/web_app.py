@@ -18,6 +18,7 @@ from .generator import export_package, generate_video_package
 from .models import VideoBrief
 from .providers import select_provider
 from .render_engine import RenderJob, get_video_renderer
+from .scene_images import prepare_scene_images
 
 MAX_BODY_BYTES = 32_768
 ACCOUNT_ID = "web-demo"
@@ -118,6 +119,7 @@ class WebAppService:
                         estimated_cost_brl=cost,
                     )
                 )
+            scene_images = prepare_scene_images(project_dir)
             job = get_video_renderer().render(RenderJob(package_dir=str(project_dir)))
             if job.state != "succeeded" or not Path(job.output_file).is_file():
                 raise RuntimeError(
@@ -141,6 +143,15 @@ class WebAppService:
             "credits_used": sum(event.credits for event in reservations),
             "video_url": f"/media/{project_id}/video-final.mp4",
             "download_url": f"/media/{project_id}/video-final.mp4?download=1",
+            "scene_images": [
+                {
+                    "scene_index": item.scene_index,
+                    "provider": item.provider,
+                    "filename": item.filename,
+                    "fallback_reason": item.fallback_reason,
+                }
+                for item in scene_images
+            ],
             "notice": "MP4 renderizado pelo motor FFmpeg do ViralLab.",
         }
 
