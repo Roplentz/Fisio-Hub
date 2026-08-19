@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -244,7 +245,11 @@ def _final_mix_command(
         audio_map = "[aout]"
 
     video_filter = None
-    if burn_captions and captions.exists():
+    # A distribuição estática Gyan do FFmpeg para Windows pode trazer libass
+    # ligado ao Fontconfig sem um fonts.conf utilizável. Nesse ambiente, os
+    # textos de cena continuam queimados com drawtext + fontfile explícito,
+    # mas o passe adicional de SRT é desativado para não abortar o MP4.
+    if burn_captions and captions.exists() and not _is_windows():
         subtitle_path = _subtitle_escape(captions)
         video_filter = (
             f"subtitles='{subtitle_path}':"
@@ -290,8 +295,14 @@ def _cover_filter(width: int, height: int, fps: int) -> str:
 def _drawtext_filter(text: str, width: int, height: int) -> str:
     escaped = _ffmpeg_escape(text)
     font_size = max(44, int(width * 0.065))
+    fontfile = ""
+    if _is_windows():
+        windows_dir = os.getenv("WINDIR", "C:/Windows").replace("\\", "/")
+        font_path = f"{windows_dir}/Fonts/arial.ttf".replace(":", r"\:")
+        fontfile = f"fontfile='{font_path}':"
     return (
         "drawtext="
+        f"{fontfile}"
         f"text='{escaped}':"
         "fontcolor=white:"
         f"fontsize={font_size}:"
@@ -300,6 +311,10 @@ def _drawtext_filter(text: str, width: int, height: int) -> str:
         "x=(w-text_w)/2:"
         f"y={int(height * 0.72)}"
     )
+
+
+def _is_windows() -> bool:
+    return os.name == "nt"
 
 
 def _has_audio_stream(media: Path, ffprobe_bin: str) -> bool:
@@ -372,7 +387,10 @@ def _subtitle_escape(path: Path) -> str:
 
 
 def _concat_escape(path: Path) -> str:
-    return str(path).replace("'", "'\\''")
+    # O demuxer concat do FFmpeg usa a barra invertida como caractere de
+    # escape, mesmo no Windows. Caminhos nativos como C:\\Users\\... precisam
+    # ser serializados com barras POSIX dentro de concat.txt.
+    return str(path).replace("\\", "/").replace("'", "'\\''")
 
 
 def _run(command: list[str]) -> None:

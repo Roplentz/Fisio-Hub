@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "virallab-ai"
-version = "0.13.0"
+version = "0.14.0"
 description = "RP ViralLab Studio com inteligência editorial, engenharia reversa multimodal e produção de conteúdo"
 requires-python = ">=3.11"
 dependencies = []
@@ -22,6 +22,7 @@ all = ["pytest>=8", "streamlit>=1.41,<2", "kokoro>=0.9.4,<1", "soundfile>=0.12,<
 
 [project.scripts]
 virallab = "virallab.cli:main"
+virallab-web = "virallab.web_app:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

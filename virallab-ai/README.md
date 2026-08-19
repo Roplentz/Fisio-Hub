@@ -53,6 +53,23 @@ python -m pip install -e ".[ui]"
 streamlit run app.py
 ```
 
+## Testar a interface web
+
+O Fisio IA Creator Web usa o motor real de roteiro, segurança clínica e
+créditos do ViralLab, sem dependências web externas:
+
+```bash
+cd virallab-ai/web-demo
+python -m pip install -e ..
+virallab-web
+```
+
+Abra `http://localhost:8080`. A geração usa o provider `auto` (Gemini,
+Ollama ou fallback local), executa a revisão clínica e registra o consumo no
+ledger SQLite. O botão de render usa FFmpeg para produzir um MP4 vertical com
+cenas, cartões substitutos e legendas, disponível para reprodução e download.
+Nenhuma operação publica conteúdo automaticamente.
+
 Para instalar também os testes:
 
 ```bash
