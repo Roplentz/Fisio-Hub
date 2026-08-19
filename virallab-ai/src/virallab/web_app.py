@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 from dataclasses import dataclass
 from decimal import Decimal
 from http import HTTPStatus
@@ -13,9 +14,10 @@ from uuid import uuid4
 
 from .clinical_intelligence import review_video_package
 from .commercial import CommercialLedger, InsufficientCredits, estimate_credits
-from .generator import generate_video_package
+from .generator import export_package, generate_video_package
 from .models import VideoBrief
 from .providers import select_provider
+from .render_engine import RenderJob, get_video_renderer
 
 MAX_BODY_BYTES = 32_768
 ACCOUNT_ID = "web-demo"
@@ -24,12 +26,15 @@ ACCOUNT_ID = "web-demo"
 @dataclass
 class WebAppService:
     ledger: CommercialLedger
+    projects_dir: Path
 
     @classmethod
     def create(cls, data_dir: str | Path) -> "WebAppService":
         ledger = CommercialLedger(Path(data_dir) / "commercial.db")
         ledger.create_account(ACCOUNT_ID, plan_id="creator")
-        return cls(ledger)
+        projects_dir = Path(data_dir) / "projects"
+        projects_dir.mkdir(parents=True, exist_ok=True)
+        return cls(ledger, projects_dir)
 
     def health(self) -> dict[str, Any]:
         return {
@@ -67,6 +72,7 @@ class WebAppService:
                 brief, provider=select_provider(provider_name)
             )
             report = review_video_package(package)
+            export_package(package, self.project_dir(project_id))
             self.ledger.complete(reservation.event_id)
         except Exception:
             self.ledger.fail_and_refund(reservation.event_id)
@@ -82,9 +88,12 @@ class WebAppService:
 
     def render_preview(self, payload: dict[str, Any]) -> dict[str, Any]:
         project_id = _required_text(payload, "project_id", max_length=100)
+        project_dir = self.project_dir(project_id)
         duration = _duration(payload.get("duration_seconds", 30))
         if _text(payload, "safety_status", "block", 12) == "block":
             raise ValueError("Conteúdo bloqueado pela verificação clínica.")
+        if not (project_dir / "video-package.json").is_file():
+            raise FileNotFoundError("Projeto não encontrado.")
 
         quantities = (
             ("image", Decimal("1"), Decimal("0.05")),
@@ -109,6 +118,11 @@ class WebAppService:
                         estimated_cost_brl=cost,
                     )
                 )
+            job = get_video_renderer().render(RenderJob(package_dir=str(project_dir)))
+            if job.state != "succeeded" or not Path(job.output_file).is_file():
+                raise RuntimeError(
+                    f"Renderização falhou ({job.error_code or 'erro desconhecido'})."
+                )
             for event in reservations:
                 self.ledger.complete(event.event_id)
         except Exception:
@@ -120,12 +134,25 @@ class WebAppService:
             raise
 
         return {
-            "status": "preview_ready",
+            "status": "video_ready",
             "project_id": project_id,
             "balance": self.ledger.balance(ACCOUNT_ID),
             "credits_used": sum(event.credits for event in reservations),
-            "notice": "Prévia lógica concluída; renderização MP4 entra na próxima etapa.",
+            "video_url": f"/media/{project_id}/video-final.mp4",
+            "download_url": f"/media/{project_id}/video-final.mp4?download=1",
+            "notice": "MP4 renderizado pelo motor FFmpeg do ViralLab.",
         }
+
+    def project_dir(self, project_id: str) -> Path:
+        if not re.fullmatch(r"web_[a-f0-9]{32}", project_id):
+            raise ValueError("Identificador de projeto inválido.")
+        return self.projects_dir / project_id
+
+    def video_path(self, project_id: str) -> Path:
+        path = self.project_dir(project_id) / "video-final.mp4"
+        if not path.is_file():
+            raise FileNotFoundError("Vídeo não encontrado.")
+        return path
 
 
 def _required_text(payload: dict[str, Any], key: str, *, max_length: int) -> str:
@@ -165,6 +192,9 @@ def build_handler(service: WebAppService, static_dir: str | Path):
             if self.path == "/api/health":
                 self._json(HTTPStatus.OK, service.health())
                 return
+            if self.path.startswith("/media/"):
+                self._video()
+                return
             super().do_GET()
 
         def do_POST(self) -> None:
@@ -178,7 +208,7 @@ def build_handler(service: WebAppService, static_dir: str | Path):
                     self._json(HTTPStatus.NOT_FOUND, {"error": "Rota não encontrada."})
                     return
                 self._json(HTTPStatus.OK, response)
-            except (ValueError, KeyError, InsufficientCredits) as exc:
+            except (ValueError, KeyError, FileNotFoundError, InsufficientCredits) as exc:
                 self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
             except Exception:
                 self._json(
@@ -211,6 +241,58 @@ def build_handler(service: WebAppService, static_dir: str | Path):
             self.send_header("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'")
             self.end_headers()
             self.wfile.write(body)
+
+        def _video(self) -> None:
+            path_only = self.path.split("?", 1)[0]
+            match = re.fullmatch(
+                r"/media/(web_[a-f0-9]{32})/video-final\.mp4", path_only
+            )
+            if not match:
+                self.send_error(HTTPStatus.NOT_FOUND)
+                return
+            try:
+                video = service.video_path(match.group(1))
+            except (ValueError, FileNotFoundError):
+                self.send_error(HTTPStatus.NOT_FOUND)
+                return
+            size = video.stat().st_size
+            start, end = 0, size - 1
+            range_header = self.headers.get("Range", "")
+            if range_header:
+                range_match = re.fullmatch(r"bytes=(\d*)-(\d*)", range_header)
+                if not range_match:
+                    self.send_error(HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
+                    return
+                if range_match.group(1):
+                    start = int(range_match.group(1))
+                if range_match.group(2):
+                    end = min(int(range_match.group(2)), size - 1)
+                if start > end or start >= size:
+                    self.send_error(HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
+                    return
+                self.send_response(HTTPStatus.PARTIAL_CONTENT)
+                self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
+            else:
+                self.send_response(HTTPStatus.OK)
+            length = end - start + 1
+            self.send_header("Content-Type", "video/mp4")
+            self.send_header("Accept-Ranges", "bytes")
+            self.send_header("Content-Length", str(length))
+            if "download=1" in self.path:
+                self.send_header(
+                    "Content-Disposition", 'attachment; filename="fisio-ia-video.mp4"'
+                )
+            self.send_header("Cache-Control", "private, max-age=3600")
+            self.end_headers()
+            with video.open("rb") as stream:
+                stream.seek(start)
+                remaining = length
+                while remaining:
+                    chunk = stream.read(min(65_536, remaining))
+                    if not chunk:
+                        break
+                    self.wfile.write(chunk)
+                    remaining -= len(chunk)
 
         def log_message(self, format: str, *args: Any) -> None:
             if os.getenv("VIRALLAB_WEB_QUIET") != "1":
