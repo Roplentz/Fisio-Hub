@@ -5,6 +5,8 @@ import json
 import pytest
 
 from virallab.brand_kit import BrandKitStore
+from virallab.creative_assets import build_scene_prompt
+from virallab.models import Scene
 from virallab.personal_media import PersonalMediaLibrary
 from virallab.pronunciation import PronunciationDictionary
 
@@ -75,3 +77,25 @@ def test_personal_media_requires_consent_and_tracks_hash(tmp_path):
 
     library.delete(item.media_id)
     assert library.list() == []
+
+
+def test_brand_kit_is_applied_to_scene_prompt(tmp_path):
+    kit = BrandKitStore(tmp_path).save(
+        name="Fisio IA",
+        primary_color="#123456",
+        secondary_color="#ABCDEF",
+        accent_color="#00AACC",
+        tone=["científico"],
+    )
+    scene = Scene(
+        index=1,
+        start=0,
+        end=5,
+        scene_type="broll",
+        narration="Movimento com segurança.",
+    )
+
+    prompt = build_scene_prompt(scene, theme="Fisioterapia", brand_kit=kit)
+
+    assert "#123456" in prompt
+    assert "Fisio IA" in prompt
