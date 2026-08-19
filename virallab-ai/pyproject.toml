@@ -22,6 +22,7 @@ all = ["pytest>=8", "streamlit>=1.41,<2", "kokoro>=0.9.4,<1", "soundfile>=0.12,<
 
 [project.scripts]
 virallab = "virallab.cli:main"
+virallab-web = "virallab.web_app:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
