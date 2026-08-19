@@ -55,17 +55,19 @@ streamlit run app.py
 
 ## Testar a interface web
 
-O protótipo navegável do Fisio IA Creator funciona sem instalação e sem
-dependências externas:
+O Fisio IA Creator Web usa o motor real de roteiro, segurança clínica e
+créditos do ViralLab, sem dependências web externas:
 
 ```bash
 cd virallab-ai/web-demo
-python -m http.server 8080
+python -m pip install -e ..
+virallab-web
 ```
 
-Abra `http://localhost:8080`. O protótipo demonstra criação de roteiro,
-verificação clínica, personalização da marca, prévia vertical e consumo de
-créditos. As operações são simuladas no navegador e não publicam conteúdo.
+Abra `http://localhost:8080`. A geração usa o provider `auto` (Gemini,
+Ollama ou fallback local), executa a revisão clínica e registra o consumo no
+ledger SQLite. A prévia visual ainda não produz o arquivo MP4 e nenhuma
+operação publica conteúdo automaticamente.
 
 Para instalar também os testes:
 
