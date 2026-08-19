@@ -372,7 +372,10 @@ def _subtitle_escape(path: Path) -> str:
 
 
 def _concat_escape(path: Path) -> str:
-    return str(path).replace("'", "'\\''")
+    # O demuxer concat do FFmpeg usa a barra invertida como caractere de
+    # escape, mesmo no Windows. Caminhos nativos como C:\\Users\\... precisam
+    # ser serializados com barras POSIX dentro de concat.txt.
+    return str(path).replace("\\", "/").replace("'", "'\\''")
 
 
 def _run(command: list[str]) -> None:
