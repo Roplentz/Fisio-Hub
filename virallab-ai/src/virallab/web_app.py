@@ -121,7 +121,8 @@ class WebAppService:
             job = get_video_renderer().render(RenderJob(package_dir=str(project_dir)))
             if job.state != "succeeded" or not Path(job.output_file).is_file():
                 raise RuntimeError(
-                    f"Renderização falhou ({job.error_code or 'erro desconhecido'})."
+                    "Renderização falhou: "
+                    + (job.error_message or job.error_code or "erro desconhecido")
                 )
             for event in reservations:
                 self.ledger.complete(event.event_id)
@@ -210,10 +211,15 @@ def build_handler(service: WebAppService, static_dir: str | Path):
                 self._json(HTTPStatus.OK, response)
             except (ValueError, KeyError, FileNotFoundError, InsufficientCredits) as exc:
                 self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
-            except Exception:
+            except Exception as exc:
+                message = (
+                    str(exc)
+                    if isinstance(exc, RuntimeError)
+                    else "Não foi possível concluir a operação."
+                )
                 self._json(
                     HTTPStatus.INTERNAL_SERVER_ERROR,
-                    {"error": "Não foi possível concluir a operação."},
+                    {"error": message},
                 )
 
         def _payload(self) -> dict[str, Any]:
