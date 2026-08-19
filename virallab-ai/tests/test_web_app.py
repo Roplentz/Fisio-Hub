@@ -54,6 +54,7 @@ def test_render_preview_charges_real_composite_cost(tmp_path, monkeypatch):
             return job
 
     monkeypatch.setattr("virallab.web_app.get_video_renderer", lambda: FakeRenderer())
+    monkeypatch.setattr("virallab.web_app.prepare_scene_images", lambda _project: [])
     payload = app.render_preview(
         {
             "project_id": generated["project_id"],
