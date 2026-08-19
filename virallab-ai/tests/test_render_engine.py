@@ -34,6 +34,14 @@ def test_cancelled_job_does_not_render(tmp_path):
     assert FFmpegVideoRenderer().render(job, dry_run=True).state == "cancelled"
 
 
+def test_failed_job_keeps_actionable_error_message(tmp_path):
+    job = FFmpegVideoRenderer().render(RenderJob(package_dir=str(tmp_path)))
+
+    assert job.state == "failed"
+    assert job.error_code == "RenderError"
+    assert "Plano não encontrado" in job.error_message
+
+
 def test_feature_flag_rejects_unknown_engine(monkeypatch):
     monkeypatch.setenv("MPT_RENDER_ENGINE", "unknown")
     with pytest.raises(ValueError):
