@@ -16,6 +16,7 @@ const Brand = () => (
 
 const Pill = ({children}) => <span className="pill">{children}</span>;
 const MetricCard = ({value, label}) => <div><b>{value}</b><span>{label}</span></div>;
+const openExecuta = () => { window.location.href = '/executa-ai/'; };
 
 function LandingPage({ setPage }) {
   const features = [
@@ -23,6 +24,7 @@ function LandingPage({ setPage }) {
     ['Professional Digital Twin™', 'Um perfil vivo que acompanha a evolução profissional do usuário.', Activity],
     ['Living Curriculum™', 'Cursos vivos, atualizados por evidências e revisão científica.', BookOpen],
     ['Tutor IA', 'Um agente focado no curso, nos casos clínicos e na jornada do aluno.', Bot],
+    ['EXECUTA AI', 'Agente de execução que transforma tarefas adiadas em microações concretas e mede a queda da resistência.', Bot],
   ];
 
   return (
@@ -30,7 +32,7 @@ function LandingPage({ setPage }) {
       <nav className="topbar">
         <Brand />
         <div className="navlinks">
-          <a>Discovery</a><a>Academy</a><a>Tutor IA</a><a>Admin</a>
+          <a>Discovery</a><a>Academy</a><a onClick={openExecuta}>EXECUTA AI</a><a>Admin</a>
         </div>
         <button className="btn ghost" onClick={() => setPage('student')}>Entrar</button>
       </nav>
@@ -41,10 +43,11 @@ function LandingPage({ setPage }) {
           <h1>A Academy que conhece você antes de ensinar.</h1>
           <p>
             Uma experiência inicial para validar o FisioHub: Discovery™, Professional Digital Twin™,
-            Cognitive Compass™, trilha de IA e Tutor IA em uma jornada simples para fisioterapeutas.
+            Cognitive Compass™, trilha de IA, Tutor IA e agentes orientados à ação.
           </p>
           <div className="actions">
             <button className="btn primary" onClick={() => setPage('student')}>Ver página do aluno <ArrowRight size={17}/></button>
+            <button className="btn secondary" onClick={openExecuta}>Testar EXECUTA AI</button>
             <button className="btn secondary" onClick={() => setPage('admin')}>Ver admin</button>
           </div>
           <div className="trust">
@@ -73,7 +76,7 @@ function LandingPage({ setPage }) {
 
       <section className="features">
         {features.map(([title, text, Icon]) => (
-          <div className="feature" key={title}>
+          <div className="feature" key={title} onClick={title === 'EXECUTA AI' ? openExecuta : undefined} style={title === 'EXECUTA AI' ? {cursor:'pointer'} : undefined}>
             <Icon size={24}/>
             <h3>{title}</h3>
             <p>{text}</p>
@@ -91,7 +94,7 @@ function Sidebar({ mode, setPage }) {
       <button className="side active"><LayoutDashboard size={18}/> Dashboard</button>
       <button className="side"><GraduationCap size={18}/> Trilhas</button>
       <button className="side"><Compass size={18}/> Compass</button>
-      <button className="side"><Bot size={18}/> Agentes</button>
+      <button className="side" onClick={openExecuta}><Bot size={18}/> EXECUTA AI</button>
       <button className="side"><BookOpen size={18}/> Conteúdos</button>
       <button className="side" onClick={() => setPage('landing')}>← Landing</button>
     </aside>
@@ -143,9 +146,9 @@ function StudentPage({ setPage }) {
           </div>
 
           <div className="panel">
-            <h3>Tutor IA</h3>
-            <p>“Quer transformar sua próxima aula em um caso clínico interativo?”</p>
-            <button className="btn secondary">Conversar</button>
+            <h3>EXECUTA AI</h3>
+            <p>Tem uma tarefa travada? Transforme-a em uma microação e meça sua resistência antes e depois.</p>
+            <button className="btn secondary" onClick={openExecuta}>Abrir agente</button>
           </div>
         </div>
       </section>
@@ -186,8 +189,8 @@ function AdminPage({ setPage }) {
 
           <div className="panel">
             <h3>Agentes ativos</h3>
-            <p>Tutor IA, Professor IA, Revisor Científico.</p>
-            <button className="btn secondary">Ver catálogo</button>
+            <p>Tutor IA, EXECUTA AI, Professor IA, Revisor Científico.</p>
+            <button className="btn secondary" onClick={openExecuta}>Testar EXECUTA AI</button>
           </div>
 
           <div className="panel wide">
@@ -201,7 +204,7 @@ function AdminPage({ setPage }) {
 
           <div className="panel">
             <h3>Próxima decisão</h3>
-            <p>Validar se os alunos usam o Tutor IA semanalmente antes de liberar comunidade.</p>
+            <p>Validar 30 execuções reais do EXECUTA AI antes de conectar memória remota e LLM.</p>
           </div>
         </div>
       </section>
