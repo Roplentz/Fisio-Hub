@@ -1,87 +1,27 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EXECUTA AI — FisioHub</title>
-  <link rel="stylesheet" href="./styles.css" />
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>EXECUTA AI — Pare de adiar. Comece agora.</title>
+<meta name="description" content="Uma IA de execução que transforma tarefas travadas em pequenas ações possíveis de começar agora.">
+<link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-  <main class="app-shell">
-    <header class="hero">
-      <a class="back-link" href="/">← FisioHub</a>
-      <span class="eyebrow">EXECUTA AI • Sprint 1.1</span>
-      <h1>O que você está adiando agora?</h1>
-      <p>Transforme uma tarefa travada em uma ação pequena o suficiente para começar.</p>
-      <span class="status" id="ai-mode">MOTOR LOCAL</span>
-    </header>
-
-    <section class="card" id="intake-card">
-      <label for="task">Tarefa</label>
-      <textarea id="task" rows="3" placeholder="Ex.: reunir documentos da progressão funcional"></textarea>
-      <label for="context">O que pesa quando você pensa em começar?</label>
-      <textarea id="context" rows="2" placeholder="Ex.: é burocrático, trabalhoso e eu fico adiando mesmo sabendo o que fazer"></textarea>
-      <div class="field-row">
-        <div>
-          <label for="resistance">Resistência agora: <strong id="resistance-value">5</strong>/10</label>
-          <input id="resistance" type="range" min="0" max="10" value="5" />
-        </div>
-        <div>
-          <label for="barrier">O que parece pesar mais?</label>
-          <select id="barrier">
-            <option value="clarity">Não sei por onde começar</option>
-            <option value="size">Parece grande/trabalhoso demais</option>
-            <option value="judgment">Medo de errar ou ser julgado</option>
-            <option value="boredom">É chato/burocrático</option>
-            <option value="energy">Estou sem energia</option>
-            <option value="options">Tenho opções demais</option>
-          </select>
-        </div>
-      </div>
-      <button id="start-btn">Analisar e gerar primeira ação</button>
-    </section>
-
-    <section class="card hidden" id="question-card">
-      <span class="status">UMA PERGUNTA</span>
-      <h2 id="agent-question"></h2>
-      <textarea id="question-answer" rows="2" placeholder="Responda em uma frase"></textarea>
-      <button id="answer-btn">Continuar</button>
-    </section>
-
-    <section class="card hidden" id="action-card">
-      <span class="status" id="state-badge">MICROAÇÃO</span>
-      <h2 id="micro-action"></h2>
-      <p id="micro-rationale"></p>
-      <div class="timer" id="timer">05:00</div>
-      <div class="button-row">
-        <button id="begin-btn">Começar agora</button>
-        <button class="secondary" id="smaller-btn">Ainda está grande</button>
-        <button class="secondary hidden" id="finish-btn">Finalizar antes</button>
-      </div>
-    </section>
-
-    <section class="card hidden" id="checkin-card">
-      <span class="status">CHECK-IN</span>
-      <h2>Você começou?</h2>
-      <div class="button-row">
-        <button id="done-btn">Sim</button>
-        <button class="secondary" id="not-done-btn">Não</button>
-      </div>
-      <div id="post-checkin" class="hidden">
-        <label for="resistance-after">Resistência agora: <strong id="resistance-after-value">5</strong>/10</label>
-        <input id="resistance-after" type="range" min="0" max="10" value="5" />
-        <textarea id="result" rows="2" placeholder="O que avançou?"></textarea>
-        <button id="save-btn">Salvar sessão</button>
-      </div>
-    </section>
-
-    <section class="card history-card">
-      <div class="history-header"><div><span class="status">DADOS LOCAIS</span><h2>Histórico</h2></div><button class="secondary small" id="clear-btn">Limpar</button></div>
-      <div id="history-empty">Nenhuma sessão registrada ainda.</div>
-      <div id="history-list"></div>
-    </section>
-  </main>
-  <script src="./config.js"></script>
-  <script src="./app.js"></script>
-</body>
-</html>
+<nav class="nav"><a class="brand" href="#top"><span>EXECUTA</span> AI</a><div class="navlinks"><a href="#como">Como funciona</a><a href="#preco">Preço</a><a class="navcta" href="#teste">Testar grátis</a></div></nav>
+<main id="top">
+<section class="hero"><div class="hero-copy"><span class="pill">IA DE EXECUÇÃO • TESTE GRATUITO</span><h1>Você já sabe o que precisa fazer.<br><em>Agora precisa começar.</em></h1><p class="lead">O EXECUTA AI transforma tarefas que você está adiando em uma próxima ação pequena, clara e executável — em minutos.</p><div class="hero-actions"><a class="primary" href="#teste">Destravar uma tarefa agora →</a><a class="ghost" href="#como">Entender como funciona</a></div><div class="trust"><span>✓ Sem cartão</span><span>✓ Comece em 1 minuto</span><span>✓ Não precisa instalar</span></div></div><div class="hero-card"><div class="mini-label">EXEMPLO REAL DE USO</div><div class="bubble user">“Preciso organizar documentos, mas continuo adiando.”</div><div class="bubble ai"><small>PRÓXIMA AÇÃO</small><strong>Abra a pasta dos documentos.</strong><p>Não organize nada ainda. Só deixe o material visível por 2 minutos.</p></div><div class="progress"><span></span><b>Resistência 9 → ação possível</b></div></div></section>
+<section class="problem"><span class="section-tag">O PROBLEMA NÃO É FALTA DE INFORMAÇÃO</span><h2>Planejar mais nem sempre faz você executar mais.</h2><p>Listas crescem. Abas ficam abertas. Cursos acumulam. A tarefa continua parada. O EXECUTA AI foi desenhado para atuar exatamente entre <strong>“eu preciso fazer”</strong> e <strong>“eu comecei”.</strong></p><div class="pain-grid"><article><b>01</b><h3>Tarefa grande demais</h3><p>Reduzimos o escopo até surgir uma entrada possível.</p></article><article><b>02</b><h3>Não sei por onde começar</h3><p>Transformamos ambiguidade em uma próxima ação observável.</p></article><article><b>03</b><h3>Medo, tédio ou pouca energia</h3><p>A intervenção muda conforme a barreira que está travando você.</p></article></div></section>
+<section class="how" id="como"><div><span class="section-tag">COMO FUNCIONA</span><h2>Menos motivação.<br>Mais movimento.</h2><p>Você não recebe mais uma palestra sobre produtividade. Recebe uma ação.</p></div><div class="steps"><article><i>1</i><div><h3>Conte o que está adiando</h3><p>Uma frase basta.</p></div></article><article><i>2</i><div><h3>Identifique a resistência</h3><p>Clareza, tamanho, medo de errar, tédio, energia ou excesso de opções.</p></div></article><article><i>3</i><div><h3>Receba sua microação</h3><p>O sistema reduz a tarefa para algo que você consegue iniciar agora.</p></div></article><article><i>4</i><div><h3>Se travar, ele reduz novamente</h3><p>Não é “falhou, tente mais”. É recuperação e reentrada.</p></div></article></div></section>
+<section class="demo" id="teste"><div class="demo-head"><span class="section-tag">TESTE AGORA</span><h2>Qual tarefa está ocupando espaço na sua cabeça?</h2><p>Experimente o motor do EXECUTA AI. Sem cadastro.</p></div><section class="card" id="intake-card"><label for="task">O que você está adiando?</label><textarea id="task" rows="3" placeholder="Ex.: reunir os documentos da minha progressão funcional"></textarea><label for="context">O que pesa quando você pensa em começar?</label><textarea id="context" rows="2" placeholder="Ex.: é burocrático e parece que vai levar horas"></textarea><div class="field-row"><div><label for="resistance">Resistência agora: <strong id="resistance-value">5</strong>/10</label><input id="resistance" type="range" min="0" max="10" value="5"></div><div><label for="barrier">O que pesa mais?</label><select id="barrier"><option value="clarity">Não sei por onde começar</option><option value="size">Parece grande demais</option><option value="judgment">Medo de errar ou ser julgado</option><option value="boredom">É chato/burocrático</option><option value="energy">Estou sem energia</option><option value="options">Tenho opções demais</option></select></div></div><button id="start-btn">Gerar minha primeira ação →</button><span class="status" id="ai-mode">MOTOR LOCAL</span></section>
+<section class="card hidden" id="question-card"><span class="status">UMA PERGUNTA</span><h2 id="agent-question"></h2><textarea id="question-answer" rows="2" placeholder="Responda em uma frase"></textarea><button id="answer-btn">Continuar</button></section>
+<section class="card hidden" id="action-card"><span class="status" id="state-badge">MICROAÇÃO</span><h2 id="micro-action"></h2><p id="micro-rationale"></p><div class="timer" id="timer">05:00</div><div class="button-row"><button id="begin-btn">Começar agora</button><button class="secondary" id="smaller-btn">Ainda está grande</button><button class="secondary hidden" id="finish-btn">Finalizar antes</button></div></section>
+<section class="card hidden" id="checkin-card"><span class="status">CHECK-IN</span><h2>Você começou?</h2><div class="button-row"><button id="done-btn">Sim</button><button class="secondary" id="not-done-btn">Não</button></div><div id="post-checkin" class="hidden"><label for="resistance-after">Resistência agora: <strong id="resistance-after-value">5</strong>/10</label><input id="resistance-after" type="range" min="0" max="10" value="5"><textarea id="result" rows="2" placeholder="O que avançou?"></textarea><button id="save-btn">Salvar sessão</button></div></section>
+<section class="card history-card"><div class="history-header"><div><span class="status">SEU TESTE</span><h2>Histórico local</h2></div><button class="secondary small" id="clear-btn">Limpar</button></div><div id="history-empty">Nenhuma sessão registrada ainda.</div><div id="history-list"></div></section></section>
+<section class="difference"><span class="section-tag">NÃO É MAIS UMA LISTA DE TAREFAS</span><h2>O EXECUTA AI aprende como você trava — e como você volta.</h2><div class="compare"><div><h3>Produtividade tradicional</h3><p>✕ Mais listas e planejamento</p><p>✕ Depende de disciplina constante</p><p>✕ Trata toda procrastinação igual</p><p>✕ Você recomeça do zero</p></div><div class="featured"><span>EXECUTA AI</span><h3>Inteligência de execução</h3><p>✓ Atua na barreira do momento</p><p>✓ Reduz até você conseguir começar</p><p>✓ Cria memória dos seus padrões</p><p>✓ Ajuda a recuperar depois de uma recaída</p></div></div></section>
+<section class="objections"><span class="section-tag">SEM DESCULPAS ESCONDIDAS</span><h2>“Mas eu já tentei aplicativos de produtividade.”</h2><div class="faq"><details open><summary>É só mais uma lista de tarefas?</summary><p>Não. O foco não é armazenar tarefas. É transformar uma tarefa travada na menor próxima ação possível.</p></details><details><summary>Preciso estar motivado?</summary><p>Não. A proposta é justamente diminuir a dependência de motivação usando ações menores e mais claras.</p></details><details><summary>E se a primeira ação ainda parecer difícil?</summary><p>Você toca em “Ainda está grande” e o sistema reduz novamente. A recuperação faz parte do produto.</p></details><details><summary>Isso substitui terapia ou atendimento de saúde?</summary><p>Não. EXECUTA AI é uma ferramenta de apoio à execução e produtividade, não diagnóstico ou tratamento de condições de saúde.</p></details><details><summary>Vou precisar aprender a usar IA?</summary><p>Não. Você descreve a tarefa em linguagem comum e o sistema conduz o processo.</p></details></div></section>
+<section class="pricing" id="preco"><div class="price-card"><span class="founder">PLANO FUNDADOR</span><h2>Entre antes da próxima tarefa virar “depois eu faço”.</h2><p class="price"><sup>R$</sup>59<small>/mês</small></p><p class="price-note">Preço fundador mantido enquanto sua assinatura permanecer ativa.</p><div class="features"><span>✓ Sessões ilimitadas</span><span>✓ Microações personalizadas</span><span>✓ Execution Memory</span><span>✓ Recovery inteligente</span><span>✓ Histórico e insights</span></div><a class="primary wide" href="#lead">Quero ser Fundador →</a><p class="microcopy">Estamos abrindo a primeira turma de usuários. Checkout será liberado após a fase atual de validação.</p></div></section>
+<section class="lead-section" id="lead"><div><span class="section-tag">ACESSO ANTECIPADO</span><h2>Seja um dos primeiros a executar com a gente.</h2><p>Deixe seu contato para receber a abertura do Plano Fundador de R$59/mês.</p></div><form class="lead-form" id="lead-form"><input id="lead-name" required placeholder="Seu nome"><input id="lead-email" type="email" required placeholder="Seu melhor e-mail"><input id="lead-whatsapp" placeholder="WhatsApp (opcional)"><label class="consent"><input id="lead-consent" type="checkbox" required> Concordo em receber informações sobre o EXECUTA AI.</label><button type="submit">Quero acesso antecipado →</button><p id="lead-msg"></p></form></section>
+</main>
+<footer><a class="brand" href="#top"><span>EXECUTA</span> AI</a><p>Menos intenção. Mais execução.</p><small>© 2026 FisioHub • EXECUTA AI</small></footer>
+<script src="./config.js"></script><script src="./app.js"></script><script>document.getElementById('lead-form').addEventListener('submit',async function(e){e.preventDefault();const msg=document.getElementById('lead-msg');const payload={name:document.getElementById('lead-name').value.trim(),email:document.getElementById('lead-email').value.trim(),whatsapp:document.getElementById('lead-whatsapp').value.trim(),source:'landing-v2',consent:document.getElementById('lead-consent').checked};msg.textContent='Salvando…';try{const endpoint=(window.EXECUTA_AI_CONFIG||{}).leadUrl;if(!endpoint)throw new Error('pending');const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});if(!r.ok)throw new Error('api');msg.textContent='✓ Você entrou na lista de acesso antecipado.';this.reset()}catch(err){localStorage.setItem('executa-ai-lead-pending',JSON.stringify({...payload,created_at:new Date().toISOString()}));msg.textContent='✓ Interesse registrado neste dispositivo. Integração final da lista em configuração.'}});</script>
+</body></html>
