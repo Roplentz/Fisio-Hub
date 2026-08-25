@@ -10,21 +10,24 @@
   <main class="app-shell">
     <header class="hero">
       <a class="back-link" href="/">← FisioHub</a>
-      <span class="eyebrow">EXECUTA AI • Sprint 1</span>
+      <span class="eyebrow">EXECUTA AI • Sprint 1.1</span>
       <h1>O que você está adiando agora?</h1>
       <p>Transforme uma tarefa travada em uma ação pequena o suficiente para começar.</p>
+      <span class="status" id="ai-mode">MOTOR LOCAL</span>
     </header>
 
     <section class="card" id="intake-card">
       <label for="task">Tarefa</label>
       <textarea id="task" rows="3" placeholder="Ex.: reunir documentos da progressão funcional"></textarea>
+      <label for="context">O que pesa quando você pensa em começar?</label>
+      <textarea id="context" rows="2" placeholder="Ex.: é burocrático, trabalhoso e eu fico adiando mesmo sabendo o que fazer"></textarea>
       <div class="field-row">
         <div>
           <label for="resistance">Resistência agora: <strong id="resistance-value">5</strong>/10</label>
           <input id="resistance" type="range" min="0" max="10" value="5" />
         </div>
         <div>
-          <label for="barrier">O que pesa mais?</label>
+          <label for="barrier">O que parece pesar mais?</label>
           <select id="barrier">
             <option value="clarity">Não sei por onde começar</option>
             <option value="size">Parece grande/trabalhoso demais</option>
@@ -35,7 +38,14 @@
           </select>
         </div>
       </div>
-      <button id="start-btn">Gerar primeira ação</button>
+      <button id="start-btn">Analisar e gerar primeira ação</button>
+    </section>
+
+    <section class="card hidden" id="question-card">
+      <span class="status">UMA PERGUNTA</span>
+      <h2 id="agent-question"></h2>
+      <textarea id="question-answer" rows="2" placeholder="Responda em uma frase"></textarea>
+      <button id="answer-btn">Continuar</button>
     </section>
 
     <section class="card hidden" id="action-card">
@@ -66,17 +76,12 @@
     </section>
 
     <section class="card history-card">
-      <div class="history-header">
-        <div>
-          <span class="status">DADOS LOCAIS</span>
-          <h2>Histórico</h2>
-        </div>
-        <button class="secondary small" id="clear-btn">Limpar</button>
-      </div>
+      <div class="history-header"><div><span class="status">DADOS LOCAIS</span><h2>Histórico</h2></div><button class="secondary small" id="clear-btn">Limpar</button></div>
       <div id="history-empty">Nenhuma sessão registrada ainda.</div>
       <div id="history-list"></div>
     </section>
   </main>
+  <script src="./config.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>
