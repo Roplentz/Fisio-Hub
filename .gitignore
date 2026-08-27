@@ -36,3 +36,17 @@
 ehthumbs.db
 Thumbs.db
 
+# Node / Vite #
+###############
+node_modules/
+dist/
+dist-ssr/
+.vite/
+*.local
+
+# Environment secrets #
+########################
+.env
+.env.*
+!.env.example
+
