@@ -8,6 +8,9 @@ from pathlib import Path
 from typing import Any, Iterable
 
 
+MAX_NARRATION_BYTES = 100 * 1024 * 1024
+
+
 class VoiceError(RuntimeError):
     """Falha controlada no fluxo de narração."""
 
@@ -43,6 +46,8 @@ def save_narration(
     filename: str = "narration.wav",
     ffprobe_bin: str = "ffprobe",
 ) -> VoicePlan:
+    if len(data) > MAX_NARRATION_BYTES:
+        raise VoiceError("O arquivo de narração excede o limite de 100 MB.")
     root = Path(project_dir)
     assets = root / "assets"
     assets.mkdir(parents=True, exist_ok=True)
@@ -50,7 +55,9 @@ def save_narration(
     target = assets / f"narration{suffix}"
     for existing in assets.glob("narration.*"):
         existing.unlink(missing_ok=True)
-    target.write_bytes(data)
+    temporary = target.with_name(f".{target.name}.tmp")
+    temporary.write_bytes(data)
+    temporary.replace(target)
     duration = probe_duration(target, ffprobe_bin=ffprobe_bin)
     plan = VoicePlan(
         audio_file=str(target.relative_to(root)),
@@ -125,9 +132,11 @@ def align_scenes_by_script(
 
 def save_voice_plan(project_dir: str | Path, plan: VoicePlan) -> Path:
     target = Path(project_dir) / "voice-plan.json"
-    target.write_text(
+    temporary = target.with_name(f".{target.name}.tmp")
+    temporary.write_text(
         json.dumps(plan.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8"
     )
+    temporary.replace(target)
     return target
 
 

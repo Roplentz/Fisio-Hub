@@ -112,8 +112,18 @@ def render_system_autotest() -> None:
 
 
 def install_voice_ui(source: str) -> str:
-    """Instala a tela de voz e o autoteste inicial sem duplicar o Studio."""
-    return _install_autotest_step(_install_voice_step(source))
+    """Instala extensões opcionais sem tornar o bootstrap frágil.
+
+    O patch da voz é obrigatório para o wrapper atual. Já o autoteste depende
+    de marcadores presentes apenas no Studio 3.0 completo; quando o texto
+    recebido é um fixture, uma versão antiga ou uma instalação parcial,
+    preservamos a aplicação e instalamos somente a extensão disponível.
+    """
+    patched = _install_voice_step(source)
+    try:
+        return _install_autotest_step(patched)
+    except RuntimeError:
+        return patched
 
 
 __all__ = ["install_voice_ui"]

@@ -14,6 +14,9 @@ from .drive_sync import autosync_project
 from .models import Scene, VideoBrief, VideoPackage
 
 PROJECT_PATTERN = re.compile(r"^(?:project-)?(\d{3,})$")
+MAX_IMPORT_BYTES = 250 * 1024 * 1024
+MAX_IMPORT_MEMBERS = 5000
+MAX_IMPORT_MEMBER_BYTES = 50 * 1024 * 1024
 
 
 @dataclass
@@ -82,8 +85,9 @@ class ProjectStore:
             else self._read_package_data(directory)
         )
         if package_data:
-            (directory / "video-package.json").write_text(
-                json.dumps(package_data, ensure_ascii=False, indent=2), encoding="utf-8"
+            _atomic_write_text(
+                directory / "video-package.json",
+                json.dumps(package_data, ensure_ascii=False, indent=2),
             )
 
         approved_assets = self._approved_assets(directory)
@@ -106,8 +110,9 @@ class ProjectStore:
             "scenes": scenes,
             "approved_assets": approved_assets,
         }
-        (directory / "project.json").write_text(
-            json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8"
+        _atomic_write_text(
+            directory / "project.json",
+            json.dumps(metadata, ensure_ascii=False, indent=2),
         )
         saved = SavedProject(
             project_id=clean_id,
@@ -191,14 +196,21 @@ class ProjectStore:
         return buffer.getvalue()
 
     def import_zip(self, data: bytes) -> SavedProject:
+        if len(data) > MAX_IMPORT_BYTES:
+            raise ValueError("Backup excede o limite de 250 MB.")
         new_id = self.next_id()
         destination = self.project_dir(new_id)
         destination.mkdir(parents=True, exist_ok=False)
         try:
             with zipfile.ZipFile(io.BytesIO(data)) as archive:
-                for member in archive.infolist():
-                    if member.is_dir():
-                        continue
+                members = [
+                    member for member in archive.infolist() if not member.is_dir()
+                ]
+                if len(members) > MAX_IMPORT_MEMBERS:
+                    raise ValueError("Backup excede o limite de 5.000 arquivos.")
+                for member in members:
+                    if member.file_size > MAX_IMPORT_MEMBER_BYTES:
+                        raise ValueError("Arquivo do backup excede o limite de 50 MB.")
                     relative_parts = Path(member.filename).parts
                     relative = (
                         Path(*relative_parts[1:])
@@ -266,13 +278,13 @@ class ProjectStore:
         )
 
     def _write_registry(self, projects: list[SavedProject]) -> None:
-        self.registry_path.write_text(
+        _atomic_write_text(
+            self.registry_path,
             json.dumps(
                 {"version": "1.0", "projects": [item.to_dict() for item in projects]},
                 ensure_ascii=False,
                 indent=2,
             ),
-            encoding="utf-8",
         )
 
     @staticmethod
@@ -281,6 +293,13 @@ class ProjectStore:
         if not value.isdigit():
             raise ValueError("O código do projeto deve ser numérico.")
         return f"{int(value):03d}"
+
+
+def _atomic_write_text(path: Path, content: str) -> None:
+    """Escreve primeiro em arquivo temporário e publica com rename atômico."""
+    temporary = path.with_name(f".{path.name}.tmp")
+    temporary.write_text(content, encoding="utf-8")
+    temporary.replace(path)
 
 
 def package_from_dict(data: dict[str, Any]) -> VideoPackage:
