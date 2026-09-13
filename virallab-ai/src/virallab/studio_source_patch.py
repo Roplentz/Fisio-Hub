@@ -113,7 +113,10 @@ def render_system_autotest() -> None:
 
 def install_voice_ui(source: str) -> str:
     """Instala a tela de voz e o autoteste inicial sem duplicar o Studio."""
-    return _install_autotest_step(_install_voice_step(source))
+    patched = _install_voice_step(source)
+    if STEPS_MARKER not in patched:
+        return patched
+    return _install_autotest_step(patched)
 
 
 __all__ = ["install_voice_ui"]
