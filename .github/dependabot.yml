@@ -1,0 +1,30 @@
+# Atualizações automáticas de dependências (mensal, agrupadas para reduzir ruído)
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    groups:
+      npm-atualizacoes:
+        patterns:
+          - "*"
+  - package-ecosystem: "pip"
+    directory: "/virallab-ai"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    groups:
+      pip-atualizacoes:
+        patterns:
+          - "*"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    groups:
+      github-actions-atualizacoes:
+        patterns:
+          - "*"
